@@ -72,6 +72,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "3 kilo tilapia"
                 }
               ]
             }
@@ -246,6 +249,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "3 kilo tilapia"
                       }
                     },
                     {

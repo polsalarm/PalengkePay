@@ -72,6 +72,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "fish"
                 }
               ]
             }
@@ -245,6 +248,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "fish"
                       }
                     },
                     {

@@ -97,6 +97,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "grocery items"
                 }
               ]
             }
@@ -443,6 +446,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "grocery items"
                       }
                     },
                     {

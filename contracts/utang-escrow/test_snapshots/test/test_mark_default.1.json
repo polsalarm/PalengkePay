@@ -95,6 +95,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "vegetables"
                 }
               ]
             }
@@ -392,6 +395,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARQG5"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "vegetables"
                       }
                     },
                     {

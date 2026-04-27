@@ -97,6 +97,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "spices"
                 }
               ]
             }
@@ -349,6 +352,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "spices"
                       }
                     },
                     {

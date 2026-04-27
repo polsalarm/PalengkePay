@@ -72,6 +72,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "rice"
                 }
               ]
             }
@@ -106,6 +109,9 @@
                 },
                 {
                   "u64": 604800
+                },
+                {
+                  "string": "pork"
                 }
               ]
             }
@@ -286,6 +292,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "rice"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "id"
                       },
                       "val": {
@@ -418,6 +432,14 @@
                       },
                       "val": {
                         "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "description"
+                      },
+                      "val": {
+                        "string": "pork"
                       }
                     },
                     {
