@@ -11,11 +11,11 @@ const vendorNav = [
 ];
 
 const customerNav = [
-  { to: '/customer/home', icon: Home, label: 'Home' },
-  { to: '/customer/scan', icon: ScanLine, label: 'Pay' },
-  { to: '/customer/history', icon: List, label: 'History' },
-  { to: '/customer/utang', icon: HandCoins, label: 'Utang' },
-  { to: '/market', icon: Store, label: 'Market' },
+  { to: '/customer/home', icon: Home, label: 'Home', center: false },
+  { to: '/customer/history', icon: List, label: 'History', center: false },
+  { to: '/customer/scan', icon: ScanLine, label: 'Scan', center: true },
+  { to: '/customer/utang', icon: HandCoins, label: 'Utang', center: false },
+  { to: '/market', icon: Store, label: 'Market', center: false },
 ];
 
 const adminNav = [
@@ -110,22 +110,52 @@ export function Layout() {
 
       {/* ── Mobile bottom nav ───────────────────────────── */}
       {navItems && (
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200">
-          <div className="flex h-16 items-center">
-            {navItems.map(({ to, icon: Icon, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors min-w-0 ${
-                    isActive ? 'text-teal-700' : 'text-slate-400 hover:text-slate-600'
-                  }`
-                }
-              >
-                <Icon size={18} />
-                <span className="text-[10px] font-medium leading-tight">{label}</span>
-              </NavLink>
-            ))}
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 overflow-visible">
+          <div className="flex h-16 items-center overflow-visible">
+            {navItems.map((item) => {
+              const { to, icon: Icon, label } = item;
+              const isFab = 'center' in item && item.center;
+
+              if (isFab) {
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className="flex-1 flex flex-col items-center justify-center overflow-visible"
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <div
+                          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg -translate-y-5 border-4 border-white transition-colors ${
+                            isActive ? 'bg-teal-600' : 'bg-teal-700'
+                          }`}
+                        >
+                          <Icon size={22} className="text-white" />
+                        </div>
+                        <span className={`text-[10px] font-medium -mt-3.5 transition-colors ${isActive ? 'text-teal-700' : 'text-slate-400'}`}>
+                          {label}
+                        </span>
+                      </>
+                    )}
+                  </NavLink>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors min-w-0 ${
+                      isActive ? 'text-teal-700' : 'text-slate-400 hover:text-slate-600'
+                    }`
+                  }
+                >
+                  <Icon size={18} />
+                  <span className="text-[10px] font-medium leading-tight">{label}</span>
+                </NavLink>
+              );
+            })}
           </div>
         </nav>
       )}
