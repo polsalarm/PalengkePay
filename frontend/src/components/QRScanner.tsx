@@ -10,9 +10,11 @@ export interface QRScanMeta {
 interface Props {
   onScan: (address: string, meta?: QRScanMeta) => void;
   onManualEntry?: () => void;
+  /** Return true to mark as handled — skips payment address parsing */
+  onRawScan?: (text: string) => boolean;
 }
 
-export function QRScanner({ onScan, onManualEntry }: Props) {
+export function QRScanner({ onScan, onManualEntry, onRawScan }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerId = 'qr-scanner-container';
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,10 @@ export function QRScanner({ onScan, onManualEntry }: Props) {
       { fps: 10, qrbox: { width: 250, height: 250 } },
       (decodedText) => {
         const raw = decodedText.trim();
+
+        // Let parent intercept before payment parsing (e.g. utang offer QRs)
+        if (onRawScan?.(raw)) return;
+
         let address = raw;
         let meta: QRScanMeta | undefined;
 
