@@ -1,7 +1,39 @@
 import { ExternalLink, List } from 'lucide-react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useCustomerTransactions, relativeTime } from '../../lib/hooks/useTransactions';
+import type { TxRecord } from '../../lib/hooks/useTransactions';
 import { truncateAddress, stellarExpertUrl } from '../../lib/stellar';
+import { useVendorName } from '../../lib/hooks/useVendor';
+
+function TxRow({ tx }: { tx: TxRecord }) {
+  const vendorName = useVendorName(tx.to);
+  return (
+    <div className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-slate-700 truncate">
+          {vendorName || truncateAddress(tx.to)}
+        </p>
+        {tx.memo && (
+          <p className="text-xs text-teal-600 font-medium truncate mt-0.5">{tx.memo}</p>
+        )}
+        <p className="text-xs text-slate-400">{relativeTime(tx.createdAt)}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0 ml-3">
+        <span className="text-sm font-bold text-rose-500">
+          -{tx.amountXlm.toFixed(2)} XLM
+        </span>
+        <a
+          href={stellarExpertUrl(tx.id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-slate-300 hover:text-teal-600 transition-colors"
+        >
+          <ExternalLink size={12} />
+        </a>
+      </div>
+    </div>
+  );
+}
 
 export function CustomerHistory() {
   const { address } = useWallet();
@@ -37,25 +69,7 @@ export function CustomerHistory() {
         {!isLoading && transactions.length > 0 && (
           <div className="divide-y divide-slate-100">
             {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="text-sm font-mono text-slate-700">{truncateAddress(tx.to)}</p>
-                  <p className="text-xs text-slate-400">{relativeTime(tx.createdAt)}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-3">
-                  <span className="text-sm font-semibold text-red-500">
-                    -{tx.amountXlm.toFixed(2)} XLM
-                  </span>
-                  <a
-                    href={stellarExpertUrl(tx.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-slate-300 hover:text-teal-600 transition-colors"
-                  >
-                    <ExternalLink size={12} />
-                  </a>
-                </div>
-              </div>
+              <TxRow key={tx.id} tx={tx} />
             ))}
           </div>
         )}

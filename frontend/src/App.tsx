@@ -19,6 +19,7 @@ import { CustomerUtang } from './pages/customer/CustomerUtang';
 import { AdminMarket } from './pages/admin/AdminMarket';
 import { AdminRegister } from './pages/admin/AdminRegister';
 import { VendorApply } from './pages/vendor/VendorApply';
+import { MarketDirectory } from './pages/MarketDirectory';
 
 export default function App() {
   return (
@@ -55,6 +56,9 @@ export default function App() {
 
             {/* Vendor apply (public) */}
             <Route path="/vendor/apply" element={<VendorApply />} />
+
+            {/* Market directory */}
+            <Route path="/market" element={<MarketDirectory />} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

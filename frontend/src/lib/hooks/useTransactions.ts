@@ -7,18 +7,25 @@ export interface TxRecord {
   to: string;
   amountXlm: number;
   createdAt: string; // ISO 8601
+  memo?: string;
 }
 
 async function fetchPaymentsForAccount(address: string): Promise<TxRecord[]> {
   const server = getServer();
-  const page = await server
-    .payments()
-    .forAccount(address)
-    .order('desc')
-    .limit(50)
-    .call();
+  const [paymentsPage, txsPage] = await Promise.all([
+    server.payments().forAccount(address).order('desc').limit(50).call(),
+    server.transactions().forAccount(address).order('desc').limit(50).call(),
+  ]);
 
-  return page.records
+  const memoByHash = new Map<string, string>();
+  for (const tx of txsPage.records) {
+    const t = tx as { id: string; memo_type?: string; memo?: string };
+    if (t.memo_type === 'text' && t.memo) {
+      memoByHash.set(t.id, t.memo);
+    }
+  }
+
+  return paymentsPage.records
     .filter((r) => r.type === 'payment' && (r as { asset_type: string }).asset_type === 'native')
     .map((r) => {
       const p = r as {
@@ -34,6 +41,7 @@ async function fetchPaymentsForAccount(address: string): Promise<TxRecord[]> {
         to: p.to,
         amountXlm: parseFloat(p.amount),
         createdAt: p.created_at,
+        memo: memoByHash.get(p.transaction_hash),
       };
     });
 }
