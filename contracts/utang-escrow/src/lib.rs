@@ -88,8 +88,6 @@ impl UTangEscrow {
         interval_seconds: u64,
         description: String,
     ) -> u64 {
-        vendor.require_auth();
-
         if total_amount <= 0 {
             panic!("total_amount must be positive");
         }

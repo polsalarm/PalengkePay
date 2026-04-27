@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, X, HandCoins, AlertTriangle, ScanLine } from 'lucide-react';
+import { Plus, X, HandCoins, AlertTriangle, ScanLine, Keyboard, QrCode, ChevronLeft, Loader2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useVendorUtangs, useCreateUtang } from '../../lib/hooks/useUtang';
 import { UtangCard } from '../../components/UtangCard';
@@ -12,10 +13,22 @@ const INTERVAL_OPTIONS = [
   { label: 'Biweekly', days: 14 },
   { label: 'Monthly', days: 30 },
 ];
-
 const INSTALLMENT_OPTIONS = [2, 3, 4, 5, 6];
+const STROOPS = 10_000_000;
 
-interface NewUtangForm {
+export interface UtangOfferPayload {
+  t: 'u';
+  v: string;   // vendor address
+  a: number;   // total amount in stroops
+  n: number;   // installments
+  i: number;   // interval seconds
+  d: string;   // description
+}
+
+type Mode = 'qr' | 'manual';
+type Step = 'form' | 'qr_display';
+
+interface UtangForm {
   customerWallet: string;
   totalAmountXlm: string;
   installmentsTotal: number;
@@ -23,7 +36,7 @@ interface NewUtangForm {
   description: string;
 }
 
-const DEFAULT_FORM: NewUtangForm = {
+const DEFAULT_FORM: UtangForm = {
   customerWallet: '',
   totalAmountXlm: '',
   installmentsTotal: 3,
@@ -35,11 +48,14 @@ export function VendorUtang() {
   const { address } = useWallet();
   const { utangs, isLoading, refetch } = useVendorUtangs(address);
   const { createUtang, isCreating, error: createError } = useCreateUtang();
-  const [showForm, setShowForm] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
-  const [form, setForm] = useState<NewUtangForm>(DEFAULT_FORM);
+
+  const [showPanel, setShowPanel] = useState(false);
+  const [mode, setMode] = useState<Mode>('qr');
+  const [step, setStep] = useState<Step>('form');
+  const [form, setForm] = useState<UtangForm>(DEFAULT_FORM);
   const [formError, setFormError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [showCustomerScanner, setShowCustomerScanner] = useState(false);
+  const [qrPayload, setQrPayload] = useState<UtangOfferPayload | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'defaulted'>('all');
 
   const active = utangs.filter((u) => u.status === 'active');
@@ -49,36 +65,62 @@ export function VendorUtang() {
     0
   );
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    setSuccess(false);
-    if (!address) { setFormError('Wallet not connected'); return; }
-    if (!form.customerWallet.trim().startsWith('G') || form.customerWallet.trim().length !== 56) {
-      setFormError('Enter a valid Stellar wallet address (starts with G, 56 chars)');
-      return;
-    }
-    const amount = parseFloat(form.totalAmountXlm);
-    if (!amount || amount <= 0) { setFormError('Enter a valid amount'); return; }
+  const installmentXlm = form.totalAmountXlm && Number(form.totalAmountXlm) > 0
+    ? (Number(form.totalAmountXlm) / form.installmentsTotal).toFixed(2)
+    : null;
 
+  function validate(): boolean {
+    setFormError(null);
+    if (!address) { setFormError('Wallet not connected'); return false; }
+    if (!form.description.trim()) { setFormError('Enter items description'); return false; }
+    const amount = parseFloat(form.totalAmountXlm);
+    if (!amount || amount <= 0) { setFormError('Enter a valid amount'); return false; }
+    if (mode === 'manual') {
+      if (!form.customerWallet.trim().startsWith('G') || form.customerWallet.trim().length !== 56) {
+        setFormError('Enter a valid Stellar wallet address (G..., 56 chars)');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function handleGenerateQR() {
+    if (!validate() || !address) return;
+    setQrPayload({
+      t: 'u',
+      v: address,
+      a: Math.round(parseFloat(form.totalAmountXlm) * STROOPS),
+      n: form.installmentsTotal,
+      i: form.intervalDays * 86400,
+      d: form.description.trim(),
+    });
+    setStep('qr_display');
+  }
+
+  async function handleManualCreate() {
+    if (!validate() || !address) return;
     const hash = await createUtang(
       {
         vendorWallet: address,
         customerWallet: form.customerWallet.trim(),
-        totalAmountXlm: amount,
+        totalAmountXlm: parseFloat(form.totalAmountXlm),
         installmentsTotal: form.installmentsTotal,
         intervalDays: form.intervalDays,
         description: form.description.trim(),
       },
       address
     );
+    if (hash) { handleClose(); refetch(); }
+    else if (createError) setFormError(createError);
+  }
 
-    if (hash) {
-      setSuccess(true);
-      setForm(DEFAULT_FORM);
-      setShowForm(false);
-      refetch();
-    }
+  function handleClose() {
+    setShowPanel(false);
+    setStep('form');
+    setForm(DEFAULT_FORM);
+    setFormError(null);
+    setQrPayload(null);
+    setShowCustomerScanner(false);
   }
 
   return (
@@ -91,29 +133,23 @@ export function VendorUtang() {
         </div>
         {ESCROW_ID && (
           <button
-            onClick={() => { setShowForm(true); setSuccess(false); }}
+            onClick={() => { setShowPanel(true); setMode('qr'); setStep('form'); }}
             className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
           >
-            <Plus size={15} />
-            New Utang
+            <Plus size={15} /> New Utang
           </button>
         )}
       </div>
 
-      {/* No contract banner */}
       {!ESCROW_ID && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
           <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800 mb-0.5">Contract not deployed</p>
-            <p className="text-xs text-amber-700">
-              Set <code className="bg-amber-100 px-1 rounded">VITE_UTANG_ESCROW_CONTRACT_ID</code> to enable BNPL.
-            </p>
-          </div>
+          <p className="text-sm text-amber-700">
+            Set <code className="bg-amber-100 px-1 rounded">VITE_UTANG_ESCROW_CONTRACT_ID</code> to enable BNPL.
+          </p>
         </div>
       )}
 
-      {/* Summary */}
       {active.length > 0 && (
         <div className="bg-teal-700 rounded-xl p-5 text-white">
           <p className="text-xs font-medium text-teal-200 uppercase tracking-wide mb-1">Total Outstanding</p>
@@ -124,145 +160,10 @@ export function VendorUtang() {
         </div>
       )}
 
-      {/* New utang form */}
-      {showForm && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-800">New Installment Agreement</h2>
-            <button onClick={() => { setShowForm(false); setFormError(null); setShowScanner(false); }} className="text-slate-400 hover:text-slate-600">
-              <X size={16} />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Customer Wallet Address</label>
-              <div className="flex gap-2">
-                <input
-                  type="text" placeholder="G..."
-                  value={form.customerWallet}
-                  onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
-                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowScanner((s) => !s)}
-                  title="Scan customer QR"
-                  className={`flex items-center justify-center px-3 rounded-lg border transition-colors ${
-                    showScanner
-                      ? 'bg-teal-700 border-teal-700 text-white'
-                      : 'border-slate-300 text-slate-500 hover:bg-slate-50'
-                  }`}
-                >
-                  <ScanLine size={16} />
-                </button>
-              </div>
-              {form.customerWallet && form.customerWallet.length > 0 && form.customerWallet.length < 56 && (
-                <p className="text-xs text-slate-400 mt-1">{form.customerWallet.length}/56 chars</p>
-              )}
-            </div>
-
-            {/* Inline QR scanner for customer wallet */}
-            {showScanner && (
-              <div className="rounded-xl overflow-hidden border border-slate-200">
-                <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-                  <p className="text-xs font-medium text-slate-600">Ask customer to show their wallet's Receive QR</p>
-                  <button type="button" onClick={() => setShowScanner(false)} className="text-slate-400 hover:text-slate-600">
-                    <X size={14} />
-                  </button>
-                </div>
-                <QRScanner
-                  onScan={(addr) => {
-                    setForm((f) => ({ ...f, customerWallet: addr }));
-                    setShowScanner(false);
-                  }}
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Total Amount (XLM)</label>
-              <input
-                type="number" min="0.01" step="0.01" placeholder="0.00"
-                value={form.totalAmountXlm}
-                onChange={(e) => setForm((f) => ({ ...f, totalAmountXlm: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                What items? <span className="font-normal text-slate-400">(stored on-chain)</span>
-              </label>
-              <input
-                type="text" placeholder="e.g. 5kg rice, 2kg pork, vegetables"
-                maxLength={100}
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Installments</label>
-                <select
-                  value={form.installmentsTotal}
-                  onChange={(e) => setForm((f) => ({ ...f, installmentsTotal: Number(e.target.value) }))}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  {INSTALLMENT_OPTIONS.map((n) => <option key={n} value={n}>{n}x</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">Interval</label>
-                <select
-                  value={form.intervalDays}
-                  onChange={(e) => setForm((f) => ({ ...f, intervalDays: Number(e.target.value) }))}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  {INTERVAL_OPTIONS.map((o) => <option key={o.days} value={o.days}>{o.label}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {form.totalAmountXlm && Number(form.totalAmountXlm) > 0 && (
-              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                {form.installmentsTotal} installments of{' '}
-                <strong>{(Number(form.totalAmountXlm) / form.installmentsTotal).toFixed(2)} XLM</strong>{' '}
-                every {INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.label.toLowerCase()}
-              </p>
-            )}
-
-            {(formError || createError) && (
-              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
-                {formError ?? createError}
-              </p>
-            )}
-
-            <button
-              type="submit" disabled={isCreating}
-              className="w-full bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
-            >
-              {isCreating ? 'Submitting on-chain…' : 'Create Agreement'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {success && !showForm && (
-        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
-          Agreement recorded on-chain. Customer will see it in their Utang tab.
-        </div>
-      )}
-
-      {/* Filter tabs */}
       {utangs.length > 0 && (
         <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
           {(['all', 'active', 'completed', 'defaulted'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
+            <button key={f} onClick={() => setFilter(f)}
               className={`flex-1 text-xs font-medium py-1.5 rounded-md capitalize transition-colors ${
                 filter === f ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
@@ -290,9 +191,200 @@ export function VendorUtang() {
 
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-3">
-          {filtered.map((u) => (
-            <UtangCard key={String(u.id)} utang={u} perspective="vendor" />
-          ))}
+          {filtered.map((u) => <UtangCard key={String(u.id)} utang={u} perspective="vendor" />)}
+        </div>
+      )}
+
+      {/* ── New Utang fullscreen panel ──────────────────────────────────── */}
+      {showPanel && (
+        <div className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto">
+          <div className="max-w-md mx-auto px-4 py-6 space-y-5">
+
+            {/* Top bar */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => step === 'qr_display' ? (setStep('form'), setQrPayload(null)) : handleClose()}
+                className="text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                {step === 'qr_display' ? <ChevronLeft size={22} /> : <X size={22} />}
+              </button>
+              <h2 className="text-lg font-bold text-slate-900">
+                {step === 'qr_display' ? 'Show QR to Customer' : 'New Installment'}
+              </h2>
+            </div>
+
+            {/* ── Form step ── */}
+            {step === 'form' && (
+              <>
+                {/* Mode selector */}
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { id: 'qr' as Mode, icon: QrCode, title: 'QR Code', sub: 'Customer scans your screen' },
+                    { id: 'manual' as Mode, icon: Keyboard, title: 'Manual Entry', sub: 'Type / scan customer wallet' },
+                  ]).map(({ id, icon: Icon, title, sub }) => (
+                    <button key={id} onClick={() => { setMode(id); setShowCustomerScanner(false); }}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors text-center ${
+                        mode === id
+                          ? 'border-teal-600 bg-teal-50 text-teal-700'
+                          : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      <Icon size={26} />
+                      <div>
+                        <p className="text-sm font-semibold">{title}</p>
+                        <p className="text-xs leading-tight mt-0.5">{sub}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+
+                  {/* Manual: customer wallet input */}
+                  {mode === 'manual' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Customer Wallet Address</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text" placeholder="G..."
+                          value={form.customerWallet}
+                          onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
+                          className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomerScanner((s) => !s)}
+                          className={`flex items-center justify-center px-3 rounded-lg border transition-colors ${
+                            showCustomerScanner ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 text-slate-500 hover:bg-slate-50'
+                          }`}
+                        >
+                          <ScanLine size={16} />
+                        </button>
+                      </div>
+                      {showCustomerScanner && (
+                        <div className="mt-2 rounded-xl overflow-hidden border border-slate-200">
+                          <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+                            <p className="text-xs font-medium text-slate-600">Scan customer's wallet QR</p>
+                            <button onClick={() => setShowCustomerScanner(false)} className="text-slate-400"><X size={14} /></button>
+                          </div>
+                          <QRScanner onScan={(addr) => { setForm((f) => ({ ...f, customerWallet: addr })); setShowCustomerScanner(false); }} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Items description */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Items <span className="font-normal text-slate-400">(what they're buying on credit)</span>
+                    </label>
+                    <input
+                      type="text" placeholder="e.g. 5kg rice, 2kg pork, vegetables"
+                      maxLength={100}
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Total Amount (XLM)</label>
+                    <input
+                      type="number" min="0.01" step="0.01" placeholder="0.00"
+                      value={form.totalAmountXlm}
+                      onChange={(e) => setForm((f) => ({ ...f, totalAmountXlm: e.target.value }))}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+
+                  {/* Installments + Interval */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Installments</label>
+                      <select value={form.installmentsTotal}
+                        onChange={(e) => setForm((f) => ({ ...f, installmentsTotal: Number(e.target.value) }))}
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        {INSTALLMENT_OPTIONS.map((n) => <option key={n} value={n}>{n}x</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Interval</label>
+                      <select value={form.intervalDays}
+                        onChange={(e) => setForm((f) => ({ ...f, intervalDays: Number(e.target.value) }))}
+                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        {INTERVAL_OPTIONS.map((o) => <option key={o.days} value={o.days}>{o.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  {installmentXlm && form.description && (
+                    <div className="bg-teal-50 border border-teal-100 rounded-lg px-3 py-2.5 text-xs text-teal-800">
+                      <p className="font-semibold mb-0.5">{form.description}</p>
+                      <p>{form.installmentsTotal} × {installmentXlm} XLM · {INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.label.toLowerCase()}</p>
+                    </div>
+                  )}
+
+                  {(formError || createError) && (
+                    <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError ?? createError}</p>
+                  )}
+                </div>
+
+                {/* CTA */}
+                {mode === 'qr' ? (
+                  <button onClick={handleGenerateQR}
+                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+                  >
+                    <QrCode size={16} /> Generate QR Code
+                  </button>
+                ) : (
+                  <button onClick={handleManualCreate} disabled={isCreating}
+                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+                  >
+                    {isCreating && <Loader2 size={15} className="animate-spin" />}
+                    {isCreating ? 'Submitting on-chain…' : 'Create Agreement'}
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* ── QR display step ── */}
+            {step === 'qr_display' && qrPayload && (
+              <div className="space-y-5">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col items-center gap-4">
+                  <div className="bg-white p-3 rounded-xl border-2 border-teal-200 shadow-sm">
+                    <QRCodeSVG value={JSON.stringify(qrPayload)} size={220} level="M" bgColor="#ffffff" fgColor="#0f172a" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-base font-bold text-slate-900">{qrPayload.d}</p>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      {(qrPayload.a / STROOPS).toFixed(2)} XLM · {qrPayload.n} × {(qrPayload.a / STROOPS / qrPayload.n).toFixed(2)} XLM · {INTERVAL_OPTIONS.find((o) => o.days * 86400 === qrPayload.i)?.label ?? ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-1.5">
+                  <p className="text-sm font-semibold text-teal-800">How it works</p>
+                  <ol className="text-xs text-teal-700 space-y-1 list-decimal list-inside">
+                    <li>Show this QR to your customer</li>
+                    <li>Customer opens PalengkePay → My Utang → tap Scan</li>
+                    <li>Customer reviews details and taps Accept</li>
+                    <li>Agreement registers on-chain automatically</li>
+                  </ol>
+                </div>
+
+                <button onClick={handleClose}
+                  className="w-full border border-slate-200 hover:bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
     </div>
