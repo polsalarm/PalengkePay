@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short,
-    token, Address, Env, Vec,
+    token, Address, Env, String, Vec,
 };
 
 #[contracttype]
@@ -25,6 +25,7 @@ pub struct Utang {
     pub next_due: u64,
     pub interval_seconds: u64,
     pub status: UtangStatus,
+    pub description: String,
 }
 
 #[contracttype]
@@ -85,6 +86,7 @@ impl UTangEscrow {
         total_amount: i128,
         installments_total: u32,
         interval_seconds: u64,
+        description: String,
     ) -> u64 {
         vendor.require_auth();
 
@@ -122,6 +124,7 @@ impl UTangEscrow {
             next_due: now + interval_seconds,
             interval_seconds,
             status: UtangStatus::Active,
+            description,
         };
         env.storage().persistent().set(&DataKey::Utang(count), &utang);
 

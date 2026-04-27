@@ -51,6 +51,15 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
         </span>
       </div>
 
+      {/* Description */}
+      {utang.description && (
+        <div className="px-5 pb-2">
+          <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 font-medium">
+            {utang.description}
+          </p>
+        </div>
+      )}
+
       {/* Amount + progress */}
       <div className="px-5 pb-3">
         <div className="flex items-baseline justify-between mb-2">

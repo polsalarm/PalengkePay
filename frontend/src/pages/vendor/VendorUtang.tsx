@@ -20,6 +20,7 @@ interface NewUtangForm {
   totalAmountXlm: string;
   installmentsTotal: number;
   intervalDays: number;
+  description: string;
 }
 
 const DEFAULT_FORM: NewUtangForm = {
@@ -27,6 +28,7 @@ const DEFAULT_FORM: NewUtangForm = {
   totalAmountXlm: '',
   installmentsTotal: 3,
   intervalDays: 7,
+  description: '',
 };
 
 export function VendorUtang() {
@@ -66,6 +68,7 @@ export function VendorUtang() {
         totalAmountXlm: amount,
         installmentsTotal: form.installmentsTotal,
         intervalDays: form.intervalDays,
+        description: form.description.trim(),
       },
       address
     );
@@ -183,6 +186,19 @@ export function VendorUtang() {
                 type="number" min="0.01" step="0.01" placeholder="0.00"
                 value={form.totalAmountXlm}
                 onChange={(e) => setForm((f) => ({ ...f, totalAmountXlm: e.target.value }))}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                What items? <span className="font-normal text-slate-400">(stored on-chain)</span>
+              </label>
+              <input
+                type="text" placeholder="e.g. 5kg rice, 2kg pork, vegetables"
+                maxLength={100}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>

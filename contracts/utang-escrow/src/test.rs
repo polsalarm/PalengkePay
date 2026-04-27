@@ -3,7 +3,7 @@ use super::*;
 use soroban_sdk::{
     testutils::Address as _,
     token::StellarAssetClient,
-    Address, Env,
+    Address, Env, String,
 };
 
 fn setup() -> (Env, UTangEscrowClient<'static>, Address) {
@@ -27,10 +27,13 @@ fn mint_to(env: &Env, token: &Address, to: &Address, amount: i128) {
     StellarAssetClient::new(env, token).mint(to, &amount);
 }
 
+fn desc(env: &Env, s: &str) -> String {
+    String::from_str(env, s)
+}
+
 #[test]
 fn test_utang_count_starts_zero() {
     let (env, _, token_address) = setup();
-    // We need a separate client for count check — reuse env
     let contract_id = env.register_contract(None, UTangEscrow);
     let client2 = UTangEscrowClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
@@ -50,6 +53,7 @@ fn test_create_utang() {
         &(300_000_000i128),
         &3u32,
         &604800u64,
+        &desc(&env, "3 kilo tilapia"),
     );
     assert_eq!(utang_id, 1);
     assert_eq!(client.utang_count(), 1);
@@ -62,6 +66,7 @@ fn test_create_utang() {
     assert_eq!(utang.installments_paid, 0);
     assert_eq!(utang.installment_amount, 100_000_000);
     assert_eq!(utang.status, UtangStatus::Active);
+    assert_eq!(utang.description, desc(&env, "3 kilo tilapia"));
 }
 
 #[test]
@@ -77,6 +82,7 @@ fn test_pay_installment_transfers_and_tracks() {
         &(300_000_000i128),
         &3u32,
         &604800u64,
+        &desc(&env, "grocery items"),
     );
 
     client.pay_installment(&customer, &utang_id);
@@ -101,8 +107,8 @@ fn test_get_customer_utangs() {
     let vendor = Address::generate(&env);
     let customer = Address::generate(&env);
 
-    client.create_utang(&vendor, &customer, &100_000_000i128, &2u32, &604800u64);
-    client.create_utang(&vendor, &customer, &200_000_000i128, &2u32, &604800u64);
+    client.create_utang(&vendor, &customer, &100_000_000i128, &2u32, &604800u64, &desc(&env, "rice"));
+    client.create_utang(&vendor, &customer, &200_000_000i128, &2u32, &604800u64, &desc(&env, "pork"));
 
     let utangs = client.get_customer_utangs(&customer, &10u32, &0u32);
     assert_eq!(utangs.len(), 2);
@@ -114,7 +120,7 @@ fn test_get_vendor_utangs() {
     let vendor = Address::generate(&env);
     let customer = Address::generate(&env);
 
-    client.create_utang(&vendor, &customer, &100_000_000i128, &2u32, &604800u64);
+    client.create_utang(&vendor, &customer, &100_000_000i128, &2u32, &604800u64, &desc(&env, "fish"));
 
     let utangs = client.get_vendor_utangs(&vendor, &10u32, &0u32);
     assert_eq!(utangs.len(), 1);
@@ -123,7 +129,6 @@ fn test_get_vendor_utangs() {
 #[test]
 fn test_mark_default() {
     let (env, _, token_address) = setup();
-    // New contract instance so we have admin reference
     let contract_id = env.register_contract(None, UTangEscrow);
     let client = UTangEscrowClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
@@ -131,7 +136,7 @@ fn test_mark_default() {
 
     let vendor = Address::generate(&env);
     let customer = Address::generate(&env);
-    let utang_id = client.create_utang(&vendor, &customer, &100_000_000i128, &2u32, &604800u64);
+    let utang_id = client.create_utang(&vendor, &customer, &100_000_000i128, &2u32, &604800u64, &desc(&env, "vegetables"));
 
     client.mark_default(&admin, &utang_id);
     let utang = client.get_utang(&utang_id);
@@ -146,7 +151,7 @@ fn test_pay_completed_utang_panics() {
     let customer = Address::generate(&env);
     mint_to(&env, &token, &customer, 1_000_000_000i128);
 
-    let utang_id = client.create_utang(&vendor, &customer, &100_000_000i128, &1u32, &604800u64);
+    let utang_id = client.create_utang(&vendor, &customer, &100_000_000i128, &1u32, &604800u64, &desc(&env, "spices"));
     client.pay_installment(&customer, &utang_id);
     // Second call should panic — already completed
     client.pay_installment(&customer, &utang_id);
@@ -158,5 +163,5 @@ fn test_zero_amount_panics() {
     let (env, client, _) = setup();
     let vendor = Address::generate(&env);
     let customer = Address::generate(&env);
-    client.create_utang(&vendor, &customer, &0i128, &2u32, &604800u64);
+    client.create_utang(&vendor, &customer, &0i128, &2u32, &604800u64, &desc(&env, ""));
 }

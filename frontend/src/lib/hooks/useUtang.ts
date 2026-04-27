@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   simulateViewCall, prepareContractTx, submitSorobanTx,
   buildPaymentTx, submitTx,
-  addressToScVal, u64ToScVal, u32ToScVal, i128ToScVal,
+  addressToScVal, u64ToScVal, u32ToScVal, i128ToScVal, stringToScVal,
 } from '../stellar';
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
 
@@ -21,6 +21,7 @@ export interface UtangRecord {
   nextDueSecs: bigint;         // ledger timestamp (seconds)
   intervalDays: number;
   status: UtangStatus;
+  description: string;
 }
 
 // Raw chain record (snake_case from scValToNative)
@@ -35,6 +36,7 @@ interface RawUtang {
   next_due: bigint;
   interval_seconds: bigint;
   status: { tag: string };
+  description: string;
 }
 
 const STROOPS = 10_000_000;
@@ -56,6 +58,7 @@ function mapUtang(raw: RawUtang): UtangRecord {
     nextDueSecs: raw.next_due,
     intervalDays: Math.round(Number(raw.interval_seconds) / 86400),
     status,
+    description: String(raw.description ?? ''),
   };
 }
 
@@ -116,6 +119,7 @@ export interface CreateUtangParams {
   totalAmountXlm: number;
   installmentsTotal: number;
   intervalDays: number;
+  description: string;
 }
 
 export function useCreateUtang() {
@@ -143,6 +147,7 @@ export function useCreateUtang() {
         i128ToScVal(totalStroops),
         u32ToScVal(params.installmentsTotal),
         u64ToScVal(intervalSecs),
+        stringToScVal(params.description),
       ]);
 
       const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdrStr, {
