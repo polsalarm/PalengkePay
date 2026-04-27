@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { buildPaymentTx, submitTx } from '../stellar';
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
+import { db } from '../firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export type TxStatus = 'idle' | 'building' | 'signing' | 'submitting' | 'confirmed' | 'failed';
 
@@ -35,6 +37,18 @@ export function usePayment() {
 
       setState((s) => ({ ...s, status: 'submitting' }));
       const result = await submitTx(signedTxXdr);
+
+      // Save tx metadata to Firestore
+      if (db) {
+        await setDoc(doc(db, 'transactions', result.hash), {
+          customerWallet: from,
+          vendorWallet: to,
+          amountXlm: parseFloat(amount),
+          memo: memo ?? '',
+          status: 'completed',
+          createdAt: serverTimestamp(),
+        }).catch(() => {}); // non-blocking
+      }
 
       setState({ status: 'confirmed', txHash: result.hash, error: null });
     } catch (err: unknown) {

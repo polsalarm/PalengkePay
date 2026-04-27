@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { WalletProvider } from './components/WalletProvider';
+import { ToastProvider } from './components/Toast';
 import { Layout } from './components/Layout';
 import { Landing } from './pages/Landing';
 import { Connect } from './pages/Connect';
@@ -22,6 +23,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <WalletProvider>
+        <ToastProvider>
         <Routes>
           {/* Fullscreen pages — no layout shell */}
           <Route path="/onboard" element={<Onboard />} />
@@ -54,6 +56,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
+        </ToastProvider>
       </WalletProvider>
     </BrowserRouter>
   );
