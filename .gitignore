@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# Vite
+frontend/.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# PWA generated files
+frontend/dist/sw.js
+frontend/dist/workbox-*.js
+
+# Rust / Soroban contracts
+contracts/target/
+**/*.wasm
+Cargo.lock
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Misc
+*.log
+coverage/
