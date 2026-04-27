@@ -4,15 +4,6 @@ use soroban_sdk::{
     token, Address, Env, String, Vec,
 };
 
-// ── Storage keys ──────────────────────────────────────────────────────────────
-
-const ADMIN: &str         = "ADMIN";
-const FEE_BPS: &str       = "FEE_BPS";
-const PAY_COUNT: &str     = "PAY_COUNT";
-const VENDOR_REG: &str    = "VENDOR_REG";
-
-// ── Data types ────────────────────────────────────────────────────────────────
-
 #[contracttype]
 #[derive(Clone)]
 pub struct Payment {
@@ -30,8 +21,6 @@ pub enum DataKey {
     VendorPayments(Address),
 }
 
-// ── Events ────────────────────────────────────────────────────────────────────
-
 #[contracttype]
 pub struct PaymentCompletedEvent {
     pub payment_id: u64,
@@ -41,26 +30,22 @@ pub struct PaymentCompletedEvent {
     pub timestamp: u64,
 }
 
-// ── Contract ──────────────────────────────────────────────────────────────────
-
 #[contract]
 pub struct PalengkePayment;
 
 #[contractimpl]
 impl PalengkePayment {
-    /// Called once at deploy time.
-    pub fn initialize(env: Env, admin: Address, fee_bps: u32, vendor_registry: Address) {
+    pub fn initialize(env: Env, admin: Address, fee_bps: u32, native_token: Address) {
         if env.storage().instance().has(&symbol_short!("ADMIN")) {
             panic!("already initialized");
         }
         admin.require_auth();
         env.storage().instance().set(&symbol_short!("ADMIN"), &admin);
         env.storage().instance().set(&symbol_short!("FEEBPS"), &fee_bps);
-        env.storage().instance().set(&symbol_short!("VENREG"), &vendor_registry);
+        env.storage().instance().set(&symbol_short!("TOKEN"), &native_token);
         env.storage().instance().set(&symbol_short!("PAYCNT"), &0u64);
     }
 
-    /// Core payment function — transfers XLM from customer to vendor.
     pub fn pay(env: Env, customer: Address, vendor: Address, amount: i128, memo: String) -> u64 {
         customer.require_auth();
 
@@ -68,23 +53,22 @@ impl PalengkePayment {
             panic!("amount must be positive");
         }
 
-        let xlm = token::Client::new(&env, &env.current_contract_address());
-        let native_token = token::StellarAssetClient::new(&env, &env.current_contract_address());
-        let _ = native_token;
+        let native_token: Address = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("TOKEN"))
+            .expect("not initialized");
 
-        // Transfer XLM: customer → vendor
-        let token_client = token::Client::new(
-            &env,
-            &Address::from_str(&env, "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"),
-        );
-        token_client.transfer(&customer, &vendor, &amount);
+        token::Client::new(&env, &native_token).transfer(&customer, &vendor, &amount);
 
-        // Increment payment counter
-        let mut count: u64 = env.storage().instance().get(&symbol_short!("PAYCNT")).unwrap_or(0);
+        let mut count: u64 = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("PAYCNT"))
+            .unwrap_or(0);
         count += 1;
         env.storage().instance().set(&symbol_short!("PAYCNT"), &count);
 
-        // Store payment record
         let payment = Payment {
             id: count,
             customer: customer.clone(),
@@ -95,16 +79,16 @@ impl PalengkePayment {
         };
         env.storage().persistent().set(&DataKey::Payment(count), &payment);
 
-        // Append to vendor payment list
         let mut vendor_payments: Vec<u64> = env
             .storage()
             .persistent()
             .get(&DataKey::VendorPayments(vendor.clone()))
             .unwrap_or(Vec::new(&env));
         vendor_payments.push_back(count);
-        env.storage().persistent().set(&DataKey::VendorPayments(vendor.clone()), &vendor_payments);
+        env.storage()
+            .persistent()
+            .set(&DataKey::VendorPayments(vendor.clone()), &vendor_payments);
 
-        // Emit event
         env.events().publish(
             (symbol_short!("payment"), symbol_short!("done")),
             PaymentCompletedEvent {
@@ -148,8 +132,12 @@ impl PalengkePayment {
     }
 
     pub fn payment_count(env: Env) -> u64 {
-        env.storage().instance().get(&symbol_short!("PAYCNT")).unwrap_or(0)
+        env.storage()
+            .instance()
+            .get(&symbol_short!("PAYCNT"))
+            .unwrap_or(0)
     }
 }
 
+#[cfg(test)]
 mod test;
