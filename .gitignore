@@ -53,3 +53,7 @@ firestore-debug.log
 # Misc
 *.log
 coverage/
+
+# Claude Code local config — personal, not project files
+.claude/
+.agents/
