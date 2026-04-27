@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Wallet, Droplets, PartyPopper, CheckCircle, Loader2, ExternalLink, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Download, Wallet, Droplets, PartyPopper, CheckCircle, Loader2, ExternalLink, ArrowRight, ArrowLeft, QrCode, ScanLine } from 'lucide-react';
 import { useWallet } from '../lib/hooks/useWallet';
 import { useBalance } from '../lib/hooks/useBalance';
 
@@ -224,16 +224,39 @@ export function Onboard() {
                   <PartyPopper size={30} className="text-green-600" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">You're Ready!</h2>
-              <p className="text-sm text-slate-500 mb-2">Your wallet is connected and funded.</p>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">You're Ready!</h2>
+              <p className="text-sm text-slate-500 mb-1">Wallet connected and funded.</p>
               {balance && (
                 <p className="text-2xl font-bold text-teal-700 mb-6">{balance} XLM</p>
               )}
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">How will you use PalengkePay?</p>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button
+                  onClick={() => navigate('/vendor/apply')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-teal-200 bg-teal-50 hover:border-teal-400 hover:bg-teal-100 active:scale-95 transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-teal-700 flex items-center justify-center">
+                    <QrCode size={18} className="text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-teal-800">I'm a Vendor</span>
+                  <span className="text-xs text-teal-600">Accept payments</span>
+                </button>
+                <button
+                  onClick={() => navigate('/customer/home')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100 active:scale-95 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                    <ScanLine size={18} className="text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-800">I'm a Customer</span>
+                  <span className="text-xs text-slate-500">Scan & pay</span>
+                </button>
+              </div>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-3 rounded-lg transition-all"
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
               >
-                Go to Dashboard <ArrowRight size={16} />
+                Not sure yet → Go to Dashboard
               </button>
             </div>
           )}
