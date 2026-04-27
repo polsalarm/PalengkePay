@@ -1,31 +1,114 @@
 import { useState, useEffect, useCallback } from 'react';
-import { db } from '../firebase';
 import {
-  collection, query, where, orderBy, limit,
-  onSnapshot, addDoc, updateDoc, doc, serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore';
-import { buildPaymentTx, submitTx } from '../stellar';
+  simulateViewCall, prepareContractTx, submitSorobanTx,
+  buildPaymentTx, submitTx,
+  addressToScVal, u64ToScVal, u32ToScVal, i128ToScVal,
+} from '../stellar';
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
+
+const ESCROW_ID = import.meta.env.VITE_UTANG_ESCROW_CONTRACT_ID as string | undefined;
 
 export type UtangStatus = 'active' | 'completed' | 'defaulted';
 
 export interface UtangRecord {
-  id: string;
+  id: bigint;
   customerWallet: string;
   vendorWallet: string;
-  vendorName?: string;
-  customerName?: string;
-  totalAmountXlm: number;
+  totalAmountXlm: number;      // converted from i128 stroops
   installmentAmountXlm: number;
   installmentsTotal: number;
   installmentsPaid: number;
-  nextDueDate: Timestamp | null;
+  nextDueSecs: bigint;         // ledger timestamp (seconds)
   intervalDays: number;
   status: UtangStatus;
-  memo?: string;
-  createdAt: Timestamp | null;
 }
+
+// Raw chain record (snake_case from scValToNative)
+interface RawUtang {
+  id: bigint;
+  customer: string;
+  vendor: string;
+  total_amount: bigint;
+  installment_amount: bigint;
+  installments_total: number;
+  installments_paid: number;
+  next_due: bigint;
+  interval_seconds: bigint;
+  status: { tag: string };
+}
+
+const STROOPS = 10_000_000;
+
+function mapUtang(raw: RawUtang): UtangRecord {
+  const statusTag = raw.status?.tag ?? 'Active';
+  const status: UtangStatus =
+    statusTag === 'Completed' ? 'completed' :
+    statusTag === 'Defaulted' ? 'defaulted' : 'active';
+
+  return {
+    id: raw.id,
+    customerWallet: String(raw.customer),
+    vendorWallet: String(raw.vendor),
+    totalAmountXlm: Number(raw.total_amount) / STROOPS,
+    installmentAmountXlm: Number(raw.installment_amount) / STROOPS,
+    installmentsTotal: Number(raw.installments_total),
+    installmentsPaid: Number(raw.installments_paid),
+    nextDueSecs: raw.next_due,
+    intervalDays: Math.round(Number(raw.interval_seconds) / 86400),
+    status,
+  };
+}
+
+async function fetchUtangs(method: string, wallet: string): Promise<UtangRecord[]> {
+  if (!ESCROW_ID) return [];
+  try {
+    const raw = await simulateViewCall(ESCROW_ID, method, [
+      addressToScVal(wallet),
+      u32ToScVal(50),
+      u32ToScVal(0),
+    ]);
+    if (!Array.isArray(raw)) return [];
+    return (raw as RawUtang[]).map(mapUtang);
+  } catch {
+    return [];
+  }
+}
+
+export function useVendorUtangs(vendorWallet: string | null) {
+  const [utangs, setUtangs] = useState<UtangRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!vendorWallet) return;
+    setIsLoading(true);
+    fetchUtangs('get_vendor_utangs', vendorWallet)
+      .then(setUtangs)
+      .finally(() => setIsLoading(false));
+  }, [vendorWallet, tick]);
+
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
+  return { utangs, isLoading, refetch };
+}
+
+export function useCustomerUtangs(customerWallet: string | null) {
+  const [utangs, setUtangs] = useState<UtangRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!customerWallet) return;
+    setIsLoading(true);
+    fetchUtangs('get_customer_utangs', customerWallet)
+      .then(setUtangs)
+      .finally(() => setIsLoading(false));
+  }, [customerWallet, tick]);
+
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
+  return { utangs, isLoading, refetch };
+}
+
+// ── Create utang ──────────────────────────────────────────────────────────────
 
 export interface CreateUtangParams {
   vendorWallet: string;
@@ -33,103 +116,42 @@ export interface CreateUtangParams {
   totalAmountXlm: number;
   installmentsTotal: number;
   intervalDays: number;
-  memo?: string;
-  vendorName?: string;
-}
-
-export function useVendorUtangs(vendorWallet: string | null) {
-  const [utangs, setUtangs] = useState<UtangRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!vendorWallet || !db) return;
-    setIsLoading(true);
-
-    const q = query(
-      collection(db, 'utangRecords'),
-      where('vendorWallet', '==', vendorWallet),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<UtangRecord, 'id'>),
-      }));
-      setUtangs(docs);
-      setIsLoading(false);
-    });
-
-    return () => unsub();
-  }, [vendorWallet]);
-
-  return { utangs, isLoading };
-}
-
-export function useCustomerUtangs(customerWallet: string | null) {
-  const [utangs, setUtangs] = useState<UtangRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!customerWallet || !db) return;
-    setIsLoading(true);
-
-    const q = query(
-      collection(db, 'utangRecords'),
-      where('customerWallet', '==', customerWallet),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<UtangRecord, 'id'>),
-      }));
-      setUtangs(docs);
-      setIsLoading(false);
-    });
-
-    return () => unsub();
-  }, [customerWallet]);
-
-  return { utangs, isLoading };
 }
 
 export function useCreateUtang() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createUtang = useCallback(async (params: CreateUtangParams): Promise<string | null> => {
-    if (!db) {
-      setError('Firebase not configured');
+  const createUtang = useCallback(async (
+    params: CreateUtangParams,
+    signerAddress: string
+  ): Promise<string | null> => {
+    if (!ESCROW_ID) {
+      setError('Deploy VTangEscrow contract first. Set VITE_UTANG_ESCROW_CONTRACT_ID.');
       return null;
     }
     setIsCreating(true);
     setError(null);
 
     try {
-      const installmentAmountXlm = params.totalAmountXlm / params.installmentsTotal;
-      const nextDueDate = new Date();
-      nextDueDate.setDate(nextDueDate.getDate() + params.intervalDays);
+      const totalStroops = BigInt(Math.round(params.totalAmountXlm * STROOPS));
+      const intervalSecs = BigInt(params.intervalDays * 86400);
 
-      const docRef = await addDoc(collection(db, 'utangRecords'), {
-        customerWallet: params.customerWallet,
-        vendorWallet: params.vendorWallet,
-        vendorName: params.vendorName ?? '',
-        totalAmountXlm: params.totalAmountXlm,
-        installmentAmountXlm,
-        installmentsTotal: params.installmentsTotal,
-        installmentsPaid: 0,
-        nextDueDate: Timestamp.fromDate(nextDueDate),
-        intervalDays: params.intervalDays,
-        status: 'active' as UtangStatus,
-        memo: params.memo ?? '',
-        createdAt: serverTimestamp(),
+      const xdrStr = await prepareContractTx(signerAddress, ESCROW_ID, 'create_utang', [
+        addressToScVal(params.vendorWallet),
+        addressToScVal(params.customerWallet),
+        i128ToScVal(totalStroops),
+        u32ToScVal(params.installmentsTotal),
+        u64ToScVal(intervalSecs),
+      ]);
+
+      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdrStr, {
+        networkPassphrase: Networks.TESTNET,
+        address: signerAddress,
       });
 
-      return docRef.id;
+      const hash = await submitSorobanTx(signedTxXdr);
+      return hash;
     } catch (err: unknown) {
       setError((err as { message?: string }).message ?? 'Failed to create utang');
       return null;
@@ -140,6 +162,8 @@ export function useCreateUtang() {
 
   return { createUtang, isCreating, error };
 }
+
+// ── Pay installment ───────────────────────────────────────────────────────────
 
 export type InstallmentStatus = 'idle' | 'building' | 'signing' | 'submitting' | 'confirmed' | 'failed';
 
@@ -152,54 +176,54 @@ export function usePayInstallment() {
     utang: UtangRecord,
     fromAddress: string
   ) => {
-    if (!db) { setError('Firebase not configured'); return; }
-
     setStatus('building');
     setTxHash(null);
     setError(null);
 
     try {
-      const remainingInstallments = utang.installmentsTotal - utang.installmentsPaid;
-      const totalPaidSoFar = utang.installmentAmountXlm * utang.installmentsPaid;
-      const remaining = utang.totalAmountXlm - totalPaidSoFar;
-      const payAmount = remainingInstallments === 1
-        ? remaining
-        : utang.installmentAmountXlm;
+      if (ESCROW_ID) {
+        // Full on-chain path via UTangEscrow contract
+        const xdrStr = await prepareContractTx(fromAddress, ESCROW_ID, 'pay_installment', [
+          addressToScVal(fromAddress),
+          u64ToScVal(utang.id),
+        ]);
 
-      const memo = `Utang ${utang.installmentsPaid + 1}/${utang.installmentsTotal}`;
-      const xdr = await buildPaymentTx(
-        fromAddress,
-        utang.vendorWallet,
-        payAmount.toFixed(7),
-        memo
-      );
+        setStatus('signing');
+        const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdrStr, {
+          networkPassphrase: Networks.TESTNET,
+          address: fromAddress,
+        });
 
-      setStatus('signing');
-      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
-        networkPassphrase: Networks.TESTNET,
-        address: fromAddress,
-      });
+        setStatus('submitting');
+        const hash = await submitSorobanTx(signedTxXdr);
+        setTxHash(hash);
+        setStatus('confirmed');
+      } else {
+        // Fallback: direct XLM transfer when contract not deployed
+        const remaining = utang.installmentsTotal - utang.installmentsPaid;
+        const totalPaid = utang.installmentAmountXlm * utang.installmentsPaid;
+        const rest = utang.totalAmountXlm - totalPaid;
+        const payAmount = remaining === 1 ? rest : utang.installmentAmountXlm;
+        const memo = `Utang ${utang.installmentsPaid + 1}/${utang.installmentsTotal}`;
 
-      setStatus('submitting');
-      const result = await submitTx(signedTxXdr);
+        const xdrStr = await buildPaymentTx(
+          fromAddress,
+          utang.vendorWallet,
+          payAmount.toFixed(7),
+          memo
+        );
 
-      // Update Firestore record
-      const newPaid = utang.installmentsPaid + 1;
-      const isCompleted = newPaid >= utang.installmentsTotal;
-      const nextDueDate = isCompleted
-        ? null
-        : Timestamp.fromDate(
-            new Date(Date.now() + utang.intervalDays * 86400 * 1000)
-          );
+        setStatus('signing');
+        const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdrStr, {
+          networkPassphrase: Networks.TESTNET,
+          address: fromAddress,
+        });
 
-      await updateDoc(doc(db, 'utangRecords', utang.id), {
-        installmentsPaid: newPaid,
-        status: isCompleted ? 'completed' : 'active',
-        nextDueDate,
-      });
-
-      setTxHash(result.hash);
-      setStatus('confirmed');
+        setStatus('submitting');
+        const result = await submitTx(signedTxXdr);
+        setTxHash(result.hash);
+        setStatus('confirmed');
+      }
     } catch (err: unknown) {
       const msg = (err as { message?: string }).message ?? String(err);
       setError(
@@ -220,11 +244,12 @@ export function usePayInstallment() {
   return { status, txHash, error, payInstallment, reset };
 }
 
-export function dueLabel(ts: Timestamp | null): string {
-  if (!ts) return '';
-  const date = ts.toDate();
-  const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
+// ── Due date helpers ──────────────────────────────────────────────────────────
+
+export function dueLabel(nextDueSecs: bigint | null | undefined): string {
+  if (!nextDueSecs) return '';
+  const dueMs = Number(nextDueSecs) * 1000;
+  const diffMs = dueMs - Date.now();
   const diffDays = Math.ceil(diffMs / 86400000);
   if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`;
   if (diffDays === 0) return 'due today';
@@ -232,13 +257,7 @@ export function dueLabel(ts: Timestamp | null): string {
   return `due in ${diffDays}d`;
 }
 
-export function isDue(ts: Timestamp | null): boolean {
-  if (!ts) return false;
-  return ts.toDate() <= new Date();
-}
-
-export function isOverdue(ts: Timestamp | null): boolean {
-  if (!ts) return false;
-  const diff = new Date().getTime() - ts.toDate().getTime();
-  return diff > 0;
+export function isOverdue(nextDueSecs: bigint | null | undefined): boolean {
+  if (!nextDueSecs) return false;
+  return Number(nextDueSecs) * 1000 < Date.now();
 }

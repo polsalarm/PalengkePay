@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useWallet } from '../lib/hooks/useWallet';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { isRegisteredVendor } from '../lib/hooks/useVendor';
 
 export function Dashboard() {
   const { address, isConnected } = useWallet();
@@ -17,25 +16,12 @@ export function Dashboard() {
     }
     if (!address) return;
 
-    async function checkRole() {
-      setChecking(true);
-      try {
-        if (db) {
-          const vendorDoc = await getDoc(doc(db, 'vendors', address!));
-          if (vendorDoc.exists()) {
-            navigate('/vendor/home', { replace: true });
-            return;
-          }
-        }
-        navigate('/customer/home', { replace: true });
-      } catch {
-        navigate('/customer/home', { replace: true });
-      } finally {
-        setChecking(false);
-      }
-    }
-
-    checkRole();
+    isRegisteredVendor(address)
+      .then((isVendor) => {
+        navigate(isVendor ? '/vendor/home' : '/customer/home', { replace: true });
+      })
+      .catch(() => navigate('/customer/home', { replace: true }))
+      .finally(() => setChecking(false));
   }, [address, isConnected, navigate]);
 
   if (!checking) return null;

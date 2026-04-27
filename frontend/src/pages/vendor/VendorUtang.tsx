@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Plus, X, HandCoins } from 'lucide-react';
+import { Plus, X, HandCoins, AlertTriangle } from 'lucide-react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useVendorUtangs, useCreateUtang } from '../../lib/hooks/useUtang';
 import { UtangCard } from '../../components/UtangCard';
+
+const ESCROW_ID = import.meta.env.VITE_UTANG_ESCROW_CONTRACT_ID as string | undefined;
 
 const INTERVAL_OPTIONS = [
   { label: 'Weekly', days: 7 },
@@ -17,7 +19,6 @@ interface NewUtangForm {
   totalAmountXlm: string;
   installmentsTotal: number;
   intervalDays: number;
-  memo: string;
 }
 
 const DEFAULT_FORM: NewUtangForm = {
@@ -25,22 +26,20 @@ const DEFAULT_FORM: NewUtangForm = {
   totalAmountXlm: '',
   installmentsTotal: 3,
   intervalDays: 7,
-  memo: '',
 };
 
 export function VendorUtang() {
   const { address } = useWallet();
-  const { utangs, isLoading } = useVendorUtangs(address);
+  const { utangs, isLoading, refetch } = useVendorUtangs(address);
   const { createUtang, isCreating, error: createError } = useCreateUtang();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NewUtangForm>(DEFAULT_FORM);
   const [formError, setFormError] = useState<string | null>(null);
-  const [successId, setSuccessId] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'defaulted'>('all');
 
   const active = utangs.filter((u) => u.status === 'active');
   const filtered = filter === 'all' ? utangs : utangs.filter((u) => u.status === filter);
-
   const totalOwed = active.reduce(
     (sum, u) => sum + (u.totalAmountXlm - u.installmentAmountXlm * u.installmentsPaid),
     0
@@ -49,8 +48,7 @@ export function VendorUtang() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
-    setSuccessId(null);
-
+    setSuccess(false);
     if (!address) { setFormError('Wallet not connected'); return; }
     if (!form.customerWallet.trim().startsWith('G')) {
       setFormError('Enter a valid Stellar wallet address (starts with G)');
@@ -59,19 +57,22 @@ export function VendorUtang() {
     const amount = parseFloat(form.totalAmountXlm);
     if (!amount || amount <= 0) { setFormError('Enter a valid amount'); return; }
 
-    const id = await createUtang({
-      vendorWallet: address,
-      customerWallet: form.customerWallet.trim(),
-      totalAmountXlm: amount,
-      installmentsTotal: form.installmentsTotal,
-      intervalDays: form.intervalDays,
-      memo: form.memo.trim(),
-    });
+    const hash = await createUtang(
+      {
+        vendorWallet: address,
+        customerWallet: form.customerWallet.trim(),
+        totalAmountXlm: amount,
+        installmentsTotal: form.installmentsTotal,
+        intervalDays: form.intervalDays,
+      },
+      address
+    );
 
-    if (id) {
-      setSuccessId(id);
+    if (hash) {
+      setSuccess(true);
       setForm(DEFAULT_FORM);
       setShowForm(false);
+      refetch();
     }
   }
 
@@ -83,14 +84,29 @@ export function VendorUtang() {
           <h1 className="text-xl font-bold text-slate-900">Utang (BNPL)</h1>
           <p className="text-sm text-slate-400">Manage installment agreements</p>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setSuccessId(null); }}
-          className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
-        >
-          <Plus size={15} />
-          New Utang
-        </button>
+        {ESCROW_ID && (
+          <button
+            onClick={() => { setShowForm(true); setSuccess(false); }}
+            className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+          >
+            <Plus size={15} />
+            New Utang
+          </button>
+        )}
       </div>
+
+      {/* No contract banner */}
+      {!ESCROW_ID && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800 mb-0.5">Contract not deployed</p>
+            <p className="text-xs text-amber-700">
+              Set <code className="bg-amber-100 px-1 rounded">VITE_UTANG_ESCROW_CONTRACT_ID</code> to enable BNPL.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Summary */}
       {active.length > 0 && (
@@ -108,22 +124,16 @@ export function VendorUtang() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-800">New Installment Agreement</h2>
-            <button
-              onClick={() => { setShowForm(false); setFormError(null); }}
-              className="text-slate-400 hover:text-slate-600"
-            >
+            <button onClick={() => { setShowForm(false); setFormError(null); }} className="text-slate-400 hover:text-slate-600">
               <X size={16} />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Customer Wallet Address
-              </label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Customer Wallet Address</label>
               <input
-                type="text"
-                placeholder="G..."
+                type="text" placeholder="G..."
                 value={form.customerWallet}
                 onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -131,14 +141,9 @@ export function VendorUtang() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Total Amount (XLM)
-              </label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Total Amount (XLM)</label>
               <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="0.00"
+                type="number" min="0.01" step="0.01" placeholder="0.00"
                 value={form.totalAmountXlm}
                 onChange={(e) => setForm((f) => ({ ...f, totalAmountXlm: e.target.value }))}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -147,32 +152,23 @@ export function VendorUtang() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Installments
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Installments</label>
                 <select
                   value={form.installmentsTotal}
                   onChange={(e) => setForm((f) => ({ ...f, installmentsTotal: Number(e.target.value) }))}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
-                  {INSTALLMENT_OPTIONS.map((n) => (
-                    <option key={n} value={n}>{n}x</option>
-                  ))}
+                  {INSTALLMENT_OPTIONS.map((n) => <option key={n} value={n}>{n}x</option>)}
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Interval
-                </label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Interval</label>
                 <select
                   value={form.intervalDays}
                   onChange={(e) => setForm((f) => ({ ...f, intervalDays: Number(e.target.value) }))}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
-                  {INTERVAL_OPTIONS.map((o) => (
-                    <option key={o.days} value={o.days}>{o.label}</option>
-                  ))}
+                  {INTERVAL_OPTIONS.map((o) => <option key={o.days} value={o.days}>{o.label}</option>)}
                 </select>
               </div>
             </div>
@@ -185,19 +181,6 @@ export function VendorUtang() {
               </p>
             )}
 
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Memo <span className="text-slate-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. karne/isda, weekly groceries"
-                value={form.memo}
-                onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-
             {(formError || createError) && (
               <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
                 {formError ?? createError}
@@ -205,20 +188,18 @@ export function VendorUtang() {
             )}
 
             <button
-              type="submit"
-              disabled={isCreating}
+              type="submit" disabled={isCreating}
               className="w-full bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors"
             >
-              {isCreating ? 'Creating…' : 'Create Agreement'}
+              {isCreating ? 'Submitting on-chain…' : 'Create Agreement'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Success banner */}
-      {successId && !showForm && (
+      {success && !showForm && (
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 font-medium">
-          Agreement created. Customer will see it in their Utang tab.
+          Agreement recorded on-chain. Customer will see it in their Utang tab.
         </div>
       )}
 
@@ -239,33 +220,25 @@ export function VendorUtang() {
         </div>
       )}
 
-      {/* Utang list */}
       {isLoading && (
         <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 h-36 animate-pulse" />
-          ))}
+          {[1, 2].map((i) => <div key={i} className="bg-white rounded-xl border border-slate-200 h-36 animate-pulse" />)}
         </div>
       )}
 
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && filtered.length === 0 && ESCROW_ID && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
           <HandCoins size={32} className="text-slate-200 mx-auto mb-2" />
           <p className="text-sm font-medium text-slate-400">
             {filter === 'all' ? 'No agreements yet' : `No ${filter} agreements`}
           </p>
-          {filter === 'all' && (
-            <p className="text-xs text-slate-300 mt-0.5">
-              Tap "New Utang" to record an installment agreement
-            </p>
-          )}
         </div>
       )}
 
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((u) => (
-            <UtangCard key={u.id} utang={u} perspective="vendor" />
+            <UtangCard key={String(u.id)} utang={u} perspective="vendor" />
           ))}
         </div>
       )}

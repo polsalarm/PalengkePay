@@ -65,10 +65,10 @@ export function CustomerHome() {
               <div key={tx.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="text-sm font-mono text-slate-700">
-                    → {truncateAddress(tx.vendorWallet)}
+                    → {truncateAddress(tx.to)}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {tx.memo || 'No description'} · {relativeTime(tx.createdAt)}
+                    {relativeTime(tx.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-3">

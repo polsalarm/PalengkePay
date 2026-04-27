@@ -12,6 +12,10 @@ pub struct VendorRecord {
     pub id: u64,
     pub wallet: Address,
     pub market_id: String,
+    pub name: String,
+    pub stall_number: String,
+    pub phone: String,
+    pub product_type: String,
     pub registered_at: u64,
     pub total_transactions: u64,
     pub total_volume: i128,
@@ -50,7 +54,16 @@ impl VendorRegistry {
         env.storage().instance().set(&DataKey::VendorCount, &0u64);
     }
 
-    pub fn register_vendor(env: Env, admin: Address, wallet: Address, market_id: String) -> u64 {
+    pub fn register_vendor(
+        env: Env,
+        admin: Address,
+        wallet: Address,
+        market_id: String,
+        name: String,
+        stall_number: String,
+        phone: String,
+        product_type: String,
+    ) -> u64 {
         admin.require_auth();
 
         let stored_admin: Address = env.storage().instance().get(&DataKey::Admin).expect("not initialized");
@@ -70,6 +83,10 @@ impl VendorRegistry {
             id: count,
             wallet: wallet.clone(),
             market_id: market_id.clone(),
+            name,
+            stall_number,
+            phone,
+            product_type,
             registered_at: env.ledger().timestamp(),
             total_transactions: 0,
             total_volume: 0,
@@ -83,6 +100,29 @@ impl VendorRegistry {
         );
 
         count
+    }
+
+    pub fn update_profile(
+        env: Env,
+        vendor: Address,
+        name: String,
+        stall_number: String,
+        phone: String,
+        product_type: String,
+    ) {
+        vendor.require_auth();
+
+        let mut record: VendorRecord = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Vendor(vendor.clone()))
+            .expect("vendor not found");
+
+        record.name = name;
+        record.stall_number = stall_number;
+        record.phone = phone;
+        record.product_type = product_type;
+        env.storage().persistent().set(&DataKey::Vendor(vendor), &record);
     }
 
     pub fn deactivate_vendor(env: Env, admin: Address, wallet: Address) {
@@ -101,7 +141,6 @@ impl VendorRegistry {
         env.storage().persistent().set(&DataKey::Vendor(wallet), &record);
     }
 
-    /// Called by PalengkePayment after each successful payment.
     pub fn increment_stats(env: Env, vendor: Address, amount: i128) {
         if let Some(mut record) = env
             .storage()
@@ -126,4 +165,5 @@ impl VendorRegistry {
     }
 }
 
+#[cfg(test)]
 mod test;

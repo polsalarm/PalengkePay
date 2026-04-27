@@ -56,7 +56,7 @@ export function VendorHome() {
     if (transactions.length > prevCountRef.current) {
       const newest = transactions[0];
       showToast(
-        `+${newest.amountXlm.toFixed(2)} XLM${newest.memo ? ` — ${newest.memo}` : ''}`,
+        `+${newest.amountXlm.toFixed(2)} XLM from ${newest.from.slice(0, 8)}…`,
         'success'
       );
     }
@@ -124,10 +124,10 @@ export function VendorHome() {
               <div key={tx.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="text-sm font-mono text-slate-700">
-                    {truncateAddress(tx.customerWallet)}
+                    {truncateAddress(tx.from)}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {tx.memo || 'No description'} · {relativeTime(tx.createdAt)}
+                    {relativeTime(tx.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-3">

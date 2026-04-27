@@ -1,65 +1,78 @@
 import { useState, useEffect, useCallback } from 'react';
-import { db } from '../firebase';
-import {
-  collection, query, where, orderBy, limit,
-  onSnapshot, Timestamp,
-} from 'firebase/firestore';
+import { getServer } from '../stellar';
 
 export interface TxRecord {
-  id: string;
-  customerWallet: string;
-  vendorWallet: string;
+  id: string;       // tx hash
+  from: string;
+  to: string;
   amountXlm: number;
-  memo: string;
-  status: string;
-  createdAt: Timestamp | null;
+  createdAt: string; // ISO 8601
+}
+
+async function fetchPaymentsForAccount(address: string): Promise<TxRecord[]> {
+  const server = getServer();
+  const page = await server
+    .payments()
+    .forAccount(address)
+    .order('desc')
+    .limit(50)
+    .call();
+
+  return page.records
+    .filter((r) => r.type === 'payment' && (r as { asset_type: string }).asset_type === 'native')
+    .map((r) => {
+      const p = r as {
+        transaction_hash: string;
+        from: string;
+        to: string;
+        amount: string;
+        created_at: string;
+      };
+      return {
+        id: p.transaction_hash,
+        from: p.from,
+        to: p.to,
+        amountXlm: parseFloat(p.amount),
+        createdAt: p.created_at,
+      };
+    });
 }
 
 export function useVendorTransactions(vendorWallet: string | null) {
   const [transactions, setTransactions] = useState<TxRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!vendorWallet || !db) return;
+  const load = useCallback(async (wallet: string) => {
     setIsLoading(true);
-
-    const q = query(
-      collection(db, 'transactions'),
-      where('vendorWallet', '==', vendorWallet),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<TxRecord, 'id'>),
-      }));
-      setTransactions(docs);
+    try {
+      const all = await fetchPaymentsForAccount(wallet);
+      setTransactions(all.filter((t) => t.to === wallet));
+    } catch {
+      setTransactions([]);
+    } finally {
       setIsLoading(false);
-    });
+    }
+  }, []);
 
-    return () => unsub();
-  }, [vendorWallet]);
+  useEffect(() => {
+    if (!vendorWallet) return;
+    load(vendorWallet);
+    const interval = setInterval(() => load(vendorWallet), 30_000);
+    return () => clearInterval(interval);
+  }, [vendorWallet, load]);
 
   const todayEarnings = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return transactions
-      .filter((t) => {
-        if (!t.createdAt) return false;
-        return t.createdAt.toDate() >= today;
-      })
+      .filter((t) => new Date(t.createdAt) >= today)
       .reduce((sum, t) => sum + t.amountXlm, 0);
   }, [transactions]);
 
   const todayCount = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return transactions.filter((t) => {
-      if (!t.createdAt) return false;
-      return t.createdAt.toDate() >= today;
-    }).length;
+    return transactions.filter((t) => new Date(t.createdAt) >= today).length;
   }, [transactions]);
 
   return { transactions, isLoading, todayEarnings, todayCount };
@@ -69,35 +82,31 @@ export function useCustomerTransactions(customerWallet: string | null) {
   const [transactions, setTransactions] = useState<TxRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (!customerWallet || !db) return;
+  const load = useCallback(async (wallet: string) => {
     setIsLoading(true);
-
-    const q = query(
-      collection(db, 'transactions'),
-      where('customerWallet', '==', customerWallet),
-      orderBy('createdAt', 'desc'),
-      limit(30)
-    );
-
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<TxRecord, 'id'>),
-      }));
-      setTransactions(docs);
+    try {
+      const all = await fetchPaymentsForAccount(wallet);
+      setTransactions(all.filter((t) => t.from === wallet));
+    } catch {
+      setTransactions([]);
+    } finally {
       setIsLoading(false);
-    });
+    }
+  }, []);
 
-    return () => unsub();
-  }, [customerWallet]);
+  useEffect(() => {
+    if (!customerWallet) return;
+    load(customerWallet);
+    const interval = setInterval(() => load(customerWallet), 30_000);
+    return () => clearInterval(interval);
+  }, [customerWallet, load]);
 
   return { transactions, isLoading };
 }
 
-export function relativeTime(ts: Timestamp | null): string {
-  if (!ts) return '';
-  const diff = Date.now() - ts.toDate().getTime();
+export function relativeTime(isoDate: string): string {
+  if (!isoDate) return '';
+  const diff = Date.now() - new Date(isoDate).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;

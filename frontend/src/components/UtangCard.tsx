@@ -21,7 +21,7 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
     defaulted: 'bg-red-50 text-red-700 border-red-100',
   };
 
-  const overdue = utang.status === 'active' && isOverdue(utang.nextDueDate);
+  const overdue = utang.status === 'active' && isOverdue(utang.nextDueSecs);
   const counterparty = perspective === 'vendor' ? utang.customerWallet : utang.vendorWallet;
   const counterpartyLabel = perspective === 'vendor' ? 'Customer' : 'Vendor';
 
@@ -37,9 +37,6 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
           <p className="text-sm font-mono font-medium text-slate-800 truncate">
             {truncateAddress(counterparty)}
           </p>
-          {utang.memo && (
-            <p className="text-xs text-slate-400 mt-0.5 truncate">{utang.memo}</p>
-          )}
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full border capitalize ${statusColors[utang.status]}`}>
           {utang.status === 'active' && overdue ? 'overdue' : utang.status}
@@ -68,7 +65,7 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
           />
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          {(utang.installmentAmountXlm).toFixed(2)} XLM × {utang.installmentsTotal} installments
+          {utang.installmentAmountXlm.toFixed(2)} XLM × {utang.installmentsTotal} installments
           · every {utang.intervalDays}d
         </p>
       </div>
@@ -80,7 +77,7 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
             overdue ? 'text-amber-600' : 'text-slate-500'
           }`}>
             {overdue ? <AlertTriangle size={13} /> : <Clock size={13} />}
-            {dueLabel(utang.nextDueDate)}
+            {dueLabel(utang.nextDueSecs)}
           </div>
         )}
         {utang.status === 'completed' && (
