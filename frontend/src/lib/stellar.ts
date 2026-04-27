@@ -61,8 +61,8 @@ export function getRpcServer(): rpc.Server {
   return new rpc.Server(RPC_URL);
 }
 
-// Dummy account used as simulation source — does not need funds or to exist.
-const SIMULATION_SOURCE = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+// Dummy account used as simulation source — palengkepay admin, valid 56-char testnet address.
+const SIMULATION_SOURCE = 'GBI5W3JPFNGBMW2TCSGTNL3NPW6E423UN4BMAXAU34AXTSMTSDT2JDXH';
 
 /** Read-only contract call via simulation. Returns decoded JS value or null on failure. */
 export async function simulateViewCall(

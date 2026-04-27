@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, ExternalLink } from 'lucide-react';
 import { BalanceDisplay } from '../../components/BalanceDisplay';
 import { useWallet } from '../../lib/hooks/useWallet';
@@ -16,10 +17,15 @@ function greeting() {
 
 export function VendorHome() {
   const { address } = useWallet();
-  const { vendor } = useVendor(address);
+  const navigate = useNavigate();
+  const { vendor, notFound } = useVendor(address);
   const { transactions, isLoading, todayEarnings, todayCount } = useVendorTransactions(address);
   const { showToast } = useToast();
   const prevCountRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (address && notFound) navigate('/vendor/apply', { replace: true });
+  }, [address, notFound, navigate]);
 
   // Horizon SSE — real-time payment notifications
   useEffect(() => {

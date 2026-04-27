@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Home, QrCode, ScanLine, List, User, LayoutDashboard } from 'lucide-react';
+import { Home, QrCode, ScanLine, List, User, LayoutDashboard, UserPlus, Users } from 'lucide-react';
 import { WalletButton } from './WalletButton';
 
 const vendorNav = [
@@ -16,10 +16,16 @@ const customerNav = [
   { to: '/customer/utang', icon: LayoutDashboard, label: 'Utang' },
 ];
 
+const adminNav = [
+  { to: '/admin/market', icon: Users, label: 'Dashboard' },
+  { to: '/admin/register', icon: UserPlus, label: 'Register' },
+];
+
 function useNavItems() {
   const { pathname } = useLocation();
   if (pathname.startsWith('/vendor')) return vendorNav;
   if (pathname.startsWith('/customer')) return customerNav;
+  if (pathname.startsWith('/admin')) return adminNav;
   return null;
 }
 

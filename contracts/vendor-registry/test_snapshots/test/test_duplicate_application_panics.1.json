@@ -24,74 +24,7 @@
         }
       ]
     ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "register_vendor",
-              "args": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
-                },
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                },
-                {
-                  "string": "marikina-public-market"
-                },
-                {
-                  "string": "Aling Nena"
-                },
-                {
-                  "string": "B-14"
-                },
-                {
-                  "string": "+639171234567"
-                },
-                {
-                  "string": "fish"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
-    [
-      [
-        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
-        {
-          "function": {
-            "contract_fn": {
-              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "function_name": "update_profile",
-              "args": [
-                {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
-                },
-                {
-                  "string": "Mang Ben"
-                },
-                {
-                  "string": "C-22"
-                },
-                {
-                  "string": "+639187654321"
-                },
-                {
-                  "string": "meat"
-                }
-              ]
-            }
-          },
-          "sub_invocations": []
-        }
-      ]
-    ],
+    [],
     []
   ],
   "ledger": {
@@ -111,7 +44,7 @@
             "key": {
               "vec": [
                 {
-                  "symbol": "Vendor"
+                  "symbol": "Application"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -131,7 +64,7 @@
                 "key": {
                   "vec": [
                     {
-                      "symbol": "Vendor"
+                      "symbol": "Application"
                     },
                     {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
@@ -143,18 +76,10 @@
                   "map": [
                     {
                       "key": {
-                        "symbol": "id"
+                        "symbol": "applied_at"
                       },
                       "val": {
-                        "u64": 1
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "is_active"
-                      },
-                      "val": {
-                        "bool": true
+                        "u64": 0
                       }
                     },
                     {
@@ -170,7 +95,7 @@
                         "symbol": "name"
                       },
                       "val": {
-                        "string": "Mang Ben"
+                        "string": "Aling Rosa"
                       }
                     },
                     {
@@ -178,7 +103,7 @@
                         "symbol": "phone"
                       },
                       "val": {
-                        "string": "+639187654321"
+                        "string": "+639181234567"
                       }
                     },
                     {
@@ -186,15 +111,7 @@
                         "symbol": "product_type"
                       },
                       "val": {
-                        "string": "meat"
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "registered_at"
-                      },
-                      "val": {
-                        "u64": 0
+                        "string": "vegetables"
                       }
                     },
                     {
@@ -202,26 +119,19 @@
                         "symbol": "stall_number"
                       },
                       "val": {
-                        "string": "C-22"
+                        "string": "A-01"
                       }
                     },
                     {
                       "key": {
-                        "symbol": "total_transactions"
+                        "symbol": "status"
                       },
                       "val": {
-                        "u64": 0
-                      }
-                    },
-                    {
-                      "key": {
-                        "symbol": "total_volume"
-                      },
-                      "val": {
-                        "i128": {
-                          "hi": 0,
-                          "lo": 0
-                        }
+                        "vec": [
+                          {
+                            "symbol": "Pending"
+                          }
+                        ]
                       }
                     },
                     {
@@ -248,7 +158,7 @@
             "key": {
               "vec": [
                 {
-                  "symbol": "VendorList"
+                  "symbol": "PendingList"
                 }
               ]
             },
@@ -265,7 +175,7 @@
                 "key": {
                   "vec": [
                     {
-                      "symbol": "VendorList"
+                      "symbol": "PendingList"
                     }
                   ]
                 },
@@ -328,7 +238,7 @@
                           ]
                         },
                         "val": {
-                          "u64": 1
+                          "u64": 0
                         }
                       }
                     ]
@@ -363,72 +273,6 @@
                 "key": {
                   "ledger_key_nonce": {
                     "nonce": 801925984706572462
-                  }
-                },
-                "durability": "temporary",
-                "val": "void"
-              }
-            },
-            "ext": "v0"
-          },
-          6311999
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-            "key": {
-              "ledger_key_nonce": {
-                "nonce": 5541220902715666415
-              }
-            },
-            "durability": "temporary"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
-                "key": {
-                  "ledger_key_nonce": {
-                    "nonce": 5541220902715666415
-                  }
-                },
-                "durability": "temporary",
-                "val": "void"
-              }
-            },
-            "ext": "v0"
-          },
-          6311999
-        ]
-      ],
-      [
-        {
-          "contract_data": {
-            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
-            "key": {
-              "ledger_key_nonce": {
-                "nonce": 1033654523790656264
-              }
-            },
-            "durability": "temporary"
-          }
-        },
-        [
-          {
-            "last_modified_ledger_seq": 0,
-            "data": {
-              "contract_data": {
-                "ext": "v0",
-                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M",
-                "key": {
-                  "ledger_key_nonce": {
-                    "nonce": 1033654523790656264
                   }
                 },
                 "durability": "temporary",

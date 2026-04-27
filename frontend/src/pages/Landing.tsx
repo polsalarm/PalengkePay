@@ -1,8 +1,20 @@
 import { useNavigate } from 'react-router-dom';
 import { ScanLine, QrCode, Zap, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useWallet } from '../lib/hooks/useWallet';
+import { isRegisteredVendor } from '../lib/hooks/useVendor';
 
 export function Landing() {
   const navigate = useNavigate();
+  const { address, isConnected } = useWallet();
+
+  const handleVendorClick = async () => {
+    if (!isConnected || !address) {
+      navigate('/vendor/apply');
+      return;
+    }
+    const registered = await isRegisteredVendor(address);
+    navigate(registered ? '/vendor/home' : '/vendor/apply');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-slate-50">
@@ -29,7 +41,7 @@ export function Landing() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
           <button
-            onClick={() => navigate('/vendor/home')}
+            onClick={handleVendorClick}
             className="flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-sm"
           >
             <QrCode size={18} />

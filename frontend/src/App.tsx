@@ -18,6 +18,7 @@ import { CustomerHistory } from './pages/customer/CustomerHistory';
 import { CustomerUtang } from './pages/customer/CustomerUtang';
 import { AdminMarket } from './pages/admin/AdminMarket';
 import { AdminRegister } from './pages/admin/AdminRegister';
+import { VendorApply } from './pages/vendor/VendorApply';
 
 export default function App() {
   return (
@@ -51,6 +52,9 @@ export default function App() {
             {/* Admin */}
             <Route path="/admin/market" element={<AdminMarket />} />
             <Route path="/admin/register" element={<AdminRegister />} />
+
+            {/* Vendor apply (public) */}
+            <Route path="/vendor/apply" element={<VendorApply />} />
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
