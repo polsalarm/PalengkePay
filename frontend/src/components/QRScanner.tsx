@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { ScanLine, Keyboard } from 'lucide-react';
 
+export interface QRScanMeta {
+  name?: string;
+  stallInfo?: string;
+}
+
 interface Props {
-  onScan: (address: string) => void;
-  onManualEntry: () => void;
+  onScan: (address: string, meta?: QRScanMeta) => void;
+  onManualEntry?: () => void;
 }
 
 export function QRScanner({ onScan, onManualEntry }: Props) {
@@ -21,10 +26,23 @@ export function QRScanner({ onScan, onManualEntry }: Props) {
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 250, height: 250 } },
       (decodedText) => {
-        // Stellar addresses start with G and are 56 chars
-        const address = decodedText.trim();
+        const raw = decodedText.trim();
+        let address = raw;
+        let meta: QRScanMeta | undefined;
+
+        // Try JSON payload (PalengkePay vendor QR)
+        try {
+          const parsed = JSON.parse(raw) as { a?: string; n?: string; s?: string };
+          if (typeof parsed.a === 'string' && parsed.a.startsWith('G') && parsed.a.length === 56) {
+            address = parsed.a;
+            if (parsed.n) meta = { name: parsed.n, stallInfo: parsed.s ?? undefined };
+          }
+        } catch {
+          // Not JSON — treat as plain Stellar address
+        }
+
         if (address.startsWith('G') && address.length === 56) {
-          onScan(address);
+          onScan(address, meta);
         } else {
           setError('QR code is not a Stellar address. Try again.');
           setTimeout(() => setError(null), 3000);
@@ -65,16 +83,18 @@ export function QRScanner({ onScan, onManualEntry }: Props) {
       )}
 
       <p className="text-sm text-slate-400 text-center">
-        Point your camera at the vendor's QR code
+        Point your camera at the QR code
       </p>
 
-      <button
-        onClick={onManualEntry}
-        className="flex items-center justify-center gap-2 w-full text-sm text-teal-700 hover:text-teal-600 border border-teal-200 hover:bg-teal-50 py-2.5 rounded-lg transition-colors"
-      >
-        <Keyboard size={15} />
-        Enter address manually
-      </button>
+      {onManualEntry && (
+        <button
+          onClick={onManualEntry}
+          className="flex items-center justify-center gap-2 w-full text-sm text-teal-700 hover:text-teal-600 border border-teal-200 hover:bg-teal-50 py-2.5 rounded-lg transition-colors"
+        >
+          <Keyboard size={15} />
+          Enter address manually
+        </button>
+      )}
     </div>
   );
 }

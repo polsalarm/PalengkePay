@@ -27,7 +27,14 @@ export function VendorHome() {
     if (address && notFound) navigate('/vendor/apply', { replace: true });
   }, [address, notFound, navigate]);
 
-  // Horizon SSE — real-time payment notifications
+  // Request browser notification permission on first load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Horizon SSE — real-time payment notifications (in-app toast + push notification)
   useEffect(() => {
     if (!address) return;
     const server = getServer();
@@ -39,10 +46,28 @@ export function VendorHome() {
       .stream({
         onmessage: (effect: { type: string; amount?: string }) => {
           if (effect.type === 'account_credited') {
-            showToast(
-              `Payment received! +${parseFloat(effect.amount ?? '0').toFixed(2)} XLM`,
-              'success'
-            );
+            const amt = parseFloat(effect.amount ?? '0').toFixed(2);
+            showToast(`Payment received! +${amt} XLM`, 'success');
+
+            // Push notification — fetch latest tx for memo ("what did they buy")
+            if ('Notification' in window && Notification.permission === 'granted') {
+              server.transactions().forAccount(address).order('desc').limit(1).call()
+                .then(({ records }) => {
+                  const memo = records[0]?.memo ?? '';
+                  new Notification('PalengkePay — Payment received!', {
+                    body: memo ? `+${amt} XLM · ${memo}` : `+${amt} XLM`,
+                    icon: '/favicon.svg',
+                    tag: 'payment-received',
+                  });
+                })
+                .catch(() => {
+                  new Notification('PalengkePay — Payment received!', {
+                    body: `+${amt} XLM`,
+                    icon: '/favicon.svg',
+                    tag: 'payment-received',
+                  });
+                });
+            }
           }
         },
         onerror: () => {},

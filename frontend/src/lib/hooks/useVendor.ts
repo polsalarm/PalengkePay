@@ -5,6 +5,9 @@ import {
 } from '../stellar';
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
 
+// Module-level cache so repeated renders don't re-fetch same address
+const vendorNameCache = new Map<string, string>();
+
 export interface VendorProfile {
   id: number;
   name: string;
@@ -59,6 +62,27 @@ function mapApplication(r: Record<string, unknown>): VendorApplication {
     appliedAt: BigInt(String(r.applied_at ?? 0)),
     status,
   };
+}
+
+// ── Resolve vendor name by address (with cache) ───────────────────────────────
+
+export function useVendorName(address: string | null): string | null {
+  const [name, setName] = useState<string | null>(
+    address ? (vendorNameCache.get(address) ?? null) : null
+  );
+
+  useEffect(() => {
+    if (!address || !CONTRACT_ID) return;
+    if (vendorNameCache.has(address)) { setName(vendorNameCache.get(address)!); return; }
+    simulateViewCall(CONTRACT_ID, 'get_vendor', [addressToScVal(address)])
+      .then((raw) => {
+        const n = String((raw as Record<string, unknown>)?.name ?? '');
+        if (n) { vendorNameCache.set(address, n); setName(n); }
+      })
+      .catch(() => {});
+  }, [address]);
+
+  return name;
 }
 
 // ── Get single vendor ─────────────────────────────────────────────────────────
@@ -248,7 +272,32 @@ export function useAdminActions() {
     }
   }, []);
 
-  return { approve, reject, loadingWallet, error };
+  const deactivate = useCallback(async (adminAddress: string, vendorWallet: string): Promise<boolean> => {
+    if (!CONTRACT_ID) return false;
+    setLoadingWallet(vendorWallet);
+    setError(null);
+    try {
+      const xdr = await prepareContractTx(adminAddress, CONTRACT_ID, 'deactivate_vendor', [
+        addressToScVal(adminAddress),
+        addressToScVal(vendorWallet),
+      ]);
+      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
+        networkPassphrase: Networks.TESTNET,
+        address: adminAddress,
+      });
+      await submitSorobanTx(signedTxXdr);
+      // Invalidate name cache for this vendor
+      vendorNameCache.delete(vendorWallet);
+      return true;
+    } catch (err: unknown) {
+      setError((err as { message?: string }).message ?? 'Deactivate failed');
+      return false;
+    } finally {
+      setLoadingWallet(null);
+    }
+  }, []);
+
+  return { approve, reject, deactivate, loadingWallet, error };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

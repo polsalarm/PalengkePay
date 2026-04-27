@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Home, QrCode, ScanLine, List, User, LayoutDashboard, UserPlus, Users } from 'lucide-react';
+import { Home, QrCode, ScanLine, List, User, LayoutDashboard, UserPlus, Users, HandCoins } from 'lucide-react';
 import { WalletButton } from './WalletButton';
 
 const vendorNav = [
   { to: '/vendor/home', icon: Home, label: 'Home' },
   { to: '/vendor/qr', icon: QrCode, label: 'My QR' },
   { to: '/vendor/transactions', icon: List, label: 'History' },
+  { to: '/vendor/utang', icon: HandCoins, label: 'Utang' },
   { to: '/vendor/profile', icon: User, label: 'Profile' },
 ];
 

@@ -1,6 +1,7 @@
 import { CheckCircle, Clock, AlertTriangle, ExternalLink } from 'lucide-react';
 import type { UtangRecord } from '../lib/hooks/useUtang';
 import { dueLabel, isOverdue } from '../lib/hooks/useUtang';
+import { useVendorName } from '../lib/hooks/useVendor';
 import { truncateAddress, stellarExpertUrl } from '../lib/stellar';
 
 interface UtangCardProps {
@@ -15,6 +16,9 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
     ? utang.installmentsPaid / utang.installmentsTotal
     : 0;
 
+  // Resolve vendor name for customer view (customers aren't vendors so no lookup needed vendor-side)
+  const resolvedVendorName = useVendorName(perspective === 'customer' ? utang.vendorWallet : null);
+
   const statusColors = {
     active: 'bg-blue-50 text-blue-700 border-blue-100',
     completed: 'bg-green-50 text-green-700 border-green-100',
@@ -22,8 +26,12 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
   };
 
   const overdue = utang.status === 'active' && isOverdue(utang.nextDueSecs);
-  const counterparty = perspective === 'vendor' ? utang.customerWallet : utang.vendorWallet;
+
   const counterpartyLabel = perspective === 'vendor' ? 'Customer' : 'Vendor';
+  const counterpartyDisplay = perspective === 'customer'
+    ? (resolvedVendorName ?? truncateAddress(utang.vendorWallet))
+    : truncateAddress(utang.customerWallet);
+  const isMono = perspective === 'vendor' || !resolvedVendorName;
 
   return (
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${
@@ -34,8 +42,8 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
       <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-slate-500 mb-0.5">{counterpartyLabel}</p>
-          <p className="text-sm font-mono font-medium text-slate-800 truncate">
-            {truncateAddress(counterparty)}
+          <p className={`text-sm font-medium text-slate-800 truncate ${isMono ? 'font-mono' : ''}`}>
+            {counterpartyDisplay}
           </p>
         </div>
         <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full border capitalize ${statusColors[utang.status]}`}>

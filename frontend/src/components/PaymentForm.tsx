@@ -6,11 +6,13 @@ interface Props {
   vendorAddress: string;
   vendor: VendorProfile | null;
   isLoading: boolean;
+  preloadedVendorName?: string;
+  preloadedStallInfo?: string;
   onSubmit: (amount: string, memo: string) => void;
   disabled?: boolean;
 }
 
-export function PaymentForm({ vendorAddress, vendor, isLoading, onSubmit, disabled }: Props) {
+export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorName, preloadedStallInfo, onSubmit, disabled }: Props) {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [error, setError] = useState('');
@@ -25,6 +27,12 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, onSubmit, disabl
     onSubmit(amount, memo);
   };
 
+  // Use chain data if loaded, fall back to QR-embedded data, then raw address
+  const displayName = vendor?.name ?? preloadedVendorName ?? null;
+  const displayStall = vendor
+    ? `Stall ${vendor.stallNumber} · ${vendor.productType}`
+    : preloadedStallInfo ?? null;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Vendor info */}
@@ -34,17 +42,15 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, onSubmit, disabl
             <Store size={18} className="text-white" />
           </div>
           <div className="min-w-0">
-            {isLoading ? (
+            {isLoading && !preloadedVendorName ? (
               <>
                 <div className="h-4 w-32 bg-teal-200 animate-pulse rounded mb-1" />
                 <div className="h-3 w-24 bg-teal-100 animate-pulse rounded" />
               </>
-            ) : vendor ? (
+            ) : displayName ? (
               <>
-                <p className="font-semibold text-slate-900">Paying: {vendor.name}</p>
-                <p className="text-xs text-slate-500">
-                  Stall {vendor.stallNumber} · {vendor.productType}
-                </p>
+                <p className="font-semibold text-slate-900">Paying: {displayName}</p>
+                {displayStall && <p className="text-xs text-slate-500">{displayStall}</p>}
               </>
             ) : (
               <>

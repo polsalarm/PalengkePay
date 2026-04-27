@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRScanner } from '../../components/QRScanner';
+import type { QRScanMeta } from '../../components/QRScanner';
 import { PaymentForm } from '../../components/PaymentForm';
 import { TxStatusTracker } from '../../components/TxStatusTracker';
 import { useWallet } from '../../lib/hooks/useWallet';
@@ -16,14 +17,16 @@ export function CustomerScan() {
   const { address, isConnected, connect } = useWallet();
   const [step, setStep] = useState<Step>('scan');
   const [vendorAddress, setVendorAddress] = useState('');
+  const [scannedMeta, setScannedMeta] = useState<QRScanMeta | null>(null);
   const [manualInput, setManualInput] = useState('');
   const { vendor, isLoading: vendorLoading } = useVendor(
     step === 'pay' || step === 'done' ? vendorAddress : null
   );
   const { status, txHash, error, sendPayment, reset } = usePayment();
 
-  const handleScan = (addr: string) => {
+  const handleScan = (addr: string, meta?: QRScanMeta) => {
     setVendorAddress(addr);
+    setScannedMeta(meta ?? null);
     setStep('pay');
   };
 
@@ -32,6 +35,7 @@ export function CustomerScan() {
     const addr = manualInput.trim();
     if (addr.startsWith('G') && addr.length === 56) {
       setVendorAddress(addr);
+      setScannedMeta(null);
       setStep('pay');
     }
   };
@@ -121,6 +125,8 @@ export function CustomerScan() {
             vendorAddress={vendorAddress}
             vendor={vendor}
             isLoading={vendorLoading}
+            preloadedVendorName={scannedMeta?.name}
+            preloadedStallInfo={scannedMeta?.stallInfo}
             onSubmit={handlePay}
             disabled={status !== 'idle'}
           />
@@ -130,7 +136,7 @@ export function CustomerScan() {
               txHash={txHash}
               error={error}
               amount={undefined}
-              recipientName={vendor?.name}
+              recipientName={vendor?.name ?? scannedMeta?.name}
               onRetry={() => { reset(); }}
             />
           )}
@@ -144,7 +150,9 @@ export function CustomerScan() {
             <CheckCircle size={28} className="text-green-600" />
           </div>
           <h2 className="text-lg font-bold text-slate-900 mb-1">Payment sent!</h2>
-          {vendor && <p className="text-sm text-slate-500 mb-4">to {vendor.name}</p>}
+          {(vendor?.name ?? scannedMeta?.name) && (
+            <p className="text-sm text-slate-500 mb-4">to {vendor?.name ?? scannedMeta?.name}</p>
+          )}
           {txHash && (
             <a
               href={stellarExpertUrl(txHash)}

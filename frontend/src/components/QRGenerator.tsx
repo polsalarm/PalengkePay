@@ -8,11 +8,16 @@ interface Props {
 }
 
 export function QRGenerator({ value, size = 240, vendorName, stallInfo }: Props) {
+  // Embed vendor info in QR so scanner can show name without chain lookup
+  const qrValue = vendorName
+    ? JSON.stringify({ a: value, n: vendorName, s: stallInfo ?? '' })
+    : value;
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm">
         <QRCodeSVG
-          value={value}
+          value={qrValue}
           size={size}
           level="M"
           includeMargin={false}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, XCircle, Loader2, Users, Clock, ExternalLink, UserPlus, RefreshCw, ShieldCheck } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Users, Clock, ExternalLink, UserPlus, RefreshCw, ShieldCheck, PowerOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { usePendingVendors, useAllVendors, useAdminActions } from '../../lib/hooks/useVendor';
@@ -36,7 +36,7 @@ export function AdminMarket() {
   const [tab, setTab] = useState<Tab>('pending');
   const { applications, isLoading: loadingPending, error: pendingError, refetch: refetchPending } = usePendingVendors();
   const { vendors, isLoading: loadingVendors, error: vendorsError, refetch: refetchVendors } = useAllVendors();
-  const { approve, reject, loadingWallet, error: actionError } = useAdminActions();
+  const { approve, reject, deactivate, loadingWallet, error: actionError } = useAdminActions();
   const { showToast } = useToast();
 
   const handleApprove = async (vendorWallet: string, name: string) => {
@@ -59,6 +59,18 @@ export function AdminMarket() {
       refetchPending();
     } else {
       showToast(actionError?.slice(0, 100) ?? 'Reject failed', 'error');
+    }
+  };
+
+  const handleDeactivate = async (vendorWallet: string, name: string) => {
+    if (!address) return;
+    if (!window.confirm(`Deactivate ${name}? This marks them inactive on-chain.`)) return;
+    const ok = await deactivate(address, vendorWallet);
+    if (ok) {
+      showToast(`${name} deactivated.`, 'success');
+      refetchVendors();
+    } else {
+      showToast(actionError?.slice(0, 100) ?? 'Deactivate failed', 'error');
     }
   };
 
@@ -290,17 +302,34 @@ export function AdminMarket() {
                         </span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-slate-700">{v.totalTransactions}</p>
-                      <p className="text-xs text-slate-400">txns</p>
-                      <a
-                        href={`https://stellar.expert/explorer/testnet/account/${v.marketId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-slate-300 hover:text-teal-600 transition-colors inline-block mt-1"
-                      >
-                        <ExternalLink size={11} />
-                      </a>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-700">{v.totalTransactions}</p>
+                        <p className="text-xs text-slate-400">txns</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://stellar.expert/explorer/testnet/account/${v.marketId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-300 hover:text-teal-600 transition-colors"
+                        >
+                          <ExternalLink size={11} />
+                        </a>
+                        {v.isActive && (
+                          <button
+                            onClick={() => handleDeactivate(v.marketId, v.name)}
+                            disabled={loadingWallet === v.marketId}
+                            title="Deactivate vendor"
+                            className="text-slate-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                          >
+                            {loadingWallet === v.marketId
+                              ? <Loader2 size={11} className="animate-spin" />
+                              : <PowerOff size={11} />
+                            }
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

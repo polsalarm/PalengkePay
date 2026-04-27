@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Plus, X, HandCoins, AlertTriangle } from 'lucide-react';
+import { Plus, X, HandCoins, AlertTriangle, ScanLine } from 'lucide-react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useVendorUtangs, useCreateUtang } from '../../lib/hooks/useUtang';
 import { UtangCard } from '../../components/UtangCard';
+import { QRScanner } from '../../components/QRScanner';
 
 const ESCROW_ID = import.meta.env.VITE_UTANG_ESCROW_CONTRACT_ID as string | undefined;
 
@@ -33,6 +34,7 @@ export function VendorUtang() {
   const { utangs, isLoading, refetch } = useVendorUtangs(address);
   const { createUtang, isCreating, error: createError } = useCreateUtang();
   const [showForm, setShowForm] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [form, setForm] = useState<NewUtangForm>(DEFAULT_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -50,8 +52,8 @@ export function VendorUtang() {
     setFormError(null);
     setSuccess(false);
     if (!address) { setFormError('Wallet not connected'); return; }
-    if (!form.customerWallet.trim().startsWith('G')) {
-      setFormError('Enter a valid Stellar wallet address (starts with G)');
+    if (!form.customerWallet.trim().startsWith('G') || form.customerWallet.trim().length !== 56) {
+      setFormError('Enter a valid Stellar wallet address (starts with G, 56 chars)');
       return;
     }
     const amount = parseFloat(form.totalAmountXlm);
@@ -124,7 +126,7 @@ export function VendorUtang() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-slate-800">New Installment Agreement</h2>
-            <button onClick={() => { setShowForm(false); setFormError(null); }} className="text-slate-400 hover:text-slate-600">
+            <button onClick={() => { setShowForm(false); setFormError(null); setShowScanner(false); }} className="text-slate-400 hover:text-slate-600">
               <X size={16} />
             </button>
           </div>
@@ -132,13 +134,48 @@ export function VendorUtang() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Customer Wallet Address</label>
-              <input
-                type="text" placeholder="G..."
-                value={form.customerWallet}
-                onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text" placeholder="G..."
+                  value={form.customerWallet}
+                  onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
+                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowScanner((s) => !s)}
+                  title="Scan customer QR"
+                  className={`flex items-center justify-center px-3 rounded-lg border transition-colors ${
+                    showScanner
+                      ? 'bg-teal-700 border-teal-700 text-white'
+                      : 'border-slate-300 text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  <ScanLine size={16} />
+                </button>
+              </div>
+              {form.customerWallet && form.customerWallet.length > 0 && form.customerWallet.length < 56 && (
+                <p className="text-xs text-slate-400 mt-1">{form.customerWallet.length}/56 chars</p>
+              )}
             </div>
+
+            {/* Inline QR scanner for customer wallet */}
+            {showScanner && (
+              <div className="rounded-xl overflow-hidden border border-slate-200">
+                <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+                  <p className="text-xs font-medium text-slate-600">Ask customer to show their wallet's Receive QR</p>
+                  <button type="button" onClick={() => setShowScanner(false)} className="text-slate-400 hover:text-slate-600">
+                    <X size={14} />
+                  </button>
+                </div>
+                <QRScanner
+                  onScan={(addr) => {
+                    setForm((f) => ({ ...f, customerWallet: addr }));
+                    setShowScanner(false);
+                  }}
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Total Amount (XLM)</label>
