@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Plus, X, HandCoins, AlertTriangle, ScanLine, Keyboard, QrCode, ChevronLeft, Loader2 } from 'lucide-react';
+import { Plus, X, HandCoins, AlertTriangle, ScanLine, Keyboard, QrCode, ChevronLeft, Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useVendorUtangs, useCreateUtang } from '../../lib/hooks/useUtang';
 import { UtangCard } from '../../components/UtangCard';
 import { QRScanner } from '../../components/QRScanner';
+import { buildPaymentTx, submitTx } from '../../lib/stellar';
+import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
 
 const ESCROW_ID = import.meta.env.VITE_UTANG_ESCROW_CONTRACT_ID as string | undefined;
+const FEE_XLM = import.meta.env.VITE_UTANG_FEE_XLM ?? '1';
+const FEE_DEST = 'GBI5W3JPFNGBMW2TCSGTNL3NPW6E423UN4BMAXAU34AXTSMTSDT2JDXH';
 
 const INTERVAL_OPTIONS = [
   { label: 'Weekly', days: 7 },
@@ -26,7 +30,8 @@ export interface UtangOfferPayload {
 }
 
 type Mode = 'qr' | 'manual';
-type Step = 'form' | 'qr_display';
+type Step = 'form' | 'fee_payment' | 'qr_display';
+type FeeStatus = 'idle' | 'paying' | 'paid' | 'failed';
 
 interface UtangForm {
   customerWallet: string;
@@ -56,6 +61,8 @@ export function VendorUtang() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showCustomerScanner, setShowCustomerScanner] = useState(false);
   const [qrPayload, setQrPayload] = useState<UtangOfferPayload | null>(null);
+  const [feeStatus, setFeeStatus] = useState<FeeStatus>('idle');
+  const [feeError, setFeeError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'defaulted'>('all');
 
   const active = utangs.filter((u) => u.status === 'active');
@@ -86,15 +93,43 @@ export function VendorUtang() {
 
   function handleGenerateQR() {
     if (!validate() || !address) return;
-    setQrPayload({
-      t: 'u',
-      v: address,
-      a: Math.round(parseFloat(form.totalAmountXlm) * STROOPS),
-      n: form.installmentsTotal,
-      i: form.intervalDays * 86400,
-      d: form.description.trim(),
-    });
-    setStep('qr_display');
+    // Go to fee payment step first
+    setFeeStatus('idle');
+    setFeeError(null);
+    setStep('fee_payment');
+  }
+
+  async function handlePayFee() {
+    if (!address) return;
+    setFeeStatus('paying');
+    setFeeError(null);
+    try {
+      const xdr = await buildPaymentTx(address, FEE_DEST, FEE_XLM, 'PalengkePay utang fee');
+      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
+        networkPassphrase: Networks.TESTNET,
+        address,
+      });
+      await submitTx(signedTxXdr);
+      setFeeStatus('paid');
+      // Build payload and advance to QR display
+      setQrPayload({
+        t: 'u',
+        v: address,
+        a: Math.round(parseFloat(form.totalAmountXlm) * STROOPS),
+        n: form.installmentsTotal,
+        i: form.intervalDays * 86400,
+        d: form.description.trim(),
+      });
+      setStep('qr_display');
+    } catch (err: unknown) {
+      const msg = (err as { message?: string }).message ?? String(err);
+      setFeeError(
+        msg.includes('rejected') || msg.includes('cancel')
+          ? 'Transaction cancelled'
+          : msg.slice(0, 120)
+      );
+      setFeeStatus('failed');
+    }
   }
 
   async function handleManualCreate() {
@@ -121,6 +156,8 @@ export function VendorUtang() {
     setFormError(null);
     setQrPayload(null);
     setShowCustomerScanner(false);
+    setFeeStatus('idle');
+    setFeeError(null);
   }
 
   return (
@@ -203,13 +240,17 @@ export function VendorUtang() {
             {/* Top bar */}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => step === 'qr_display' ? (setStep('form'), setQrPayload(null)) : handleClose()}
+                onClick={() => {
+                  if (step === 'qr_display') { setStep('form'); setQrPayload(null); }
+                  else if (step === 'fee_payment' && feeStatus !== 'paying') { setStep('form'); setFeeStatus('idle'); setFeeError(null); }
+                  else if (step === 'form') handleClose();
+                }}
                 className="text-slate-400 hover:text-slate-700 transition-colors"
               >
-                {step === 'qr_display' ? <ChevronLeft size={22} /> : <X size={22} />}
+                {step === 'form' ? <X size={22} /> : <ChevronLeft size={22} />}
               </button>
               <h2 className="text-lg font-bold text-slate-900">
-                {step === 'qr_display' ? 'Show QR to Customer' : 'New Installment'}
+                {step === 'qr_display' ? 'Show QR to Customer' : step === 'fee_payment' ? 'Service Fee' : 'New Installment'}
               </h2>
             </div>
 
@@ -349,6 +390,67 @@ export function VendorUtang() {
                   </button>
                 )}
               </>
+            )}
+
+            {/* ── Fee payment step ── */}
+            {step === 'fee_payment' && (
+              <div className="space-y-5">
+                {/* Summary of what they're creating */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Agreement Summary</p>
+                  <p className="text-sm font-semibold text-slate-800">{form.description}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Total amount</span>
+                    <span className="font-bold text-slate-900">{form.totalAmountXlm} XLM</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Installments</span>
+                    <span className="font-medium text-slate-700">
+                      {form.installmentsTotal} × {(Number(form.totalAmountXlm) / form.installmentsTotal).toFixed(2)} XLM
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Interval</span>
+                    <span className="font-medium text-slate-700">
+                      {INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fee card */}
+                <div className="bg-teal-50 border border-teal-200 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={18} className="text-teal-700 shrink-0" />
+                    <p className="text-sm font-semibold text-teal-800">PalengkePay Service Fee</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-teal-700">QR utang creation fee</span>
+                    <span className="text-xl font-bold text-teal-900">{FEE_XLM} XLM</span>
+                  </div>
+                  <p className="text-xs text-teal-600">
+                    One-time fee per QR agreement. Paid to PalengkePay to register this installment on-chain.
+                  </p>
+                </div>
+
+                {feeError && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{feeError}</p>
+                )}
+
+                {feeStatus !== 'paying' ? (
+                  <button
+                    onClick={handlePayFee}
+                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+                  >
+                    <CheckCircle size={16} />
+                    Pay {FEE_XLM} XLM &amp; Generate QR
+                  </button>
+                ) : (
+                  <div className="w-full flex items-center justify-center gap-2 bg-teal-700/70 text-white py-3.5 rounded-xl text-sm font-semibold">
+                    <Loader2 size={16} className="animate-spin" />
+                    Confirm in wallet…
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ── QR display step ── */}
