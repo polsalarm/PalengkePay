@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Vendors — anyone can read (for payment form lookup), only app writes
+    match /vendors/{walletAddress} {
+      allow read: if true;
+      allow write: if true; // tighten after MVP
+    }
+
+    // Transactions — anyone can read/write (MVP testnet)
+    match /transactions/{txHash} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Markets — read only
+    match /markets/{marketId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Utang records — read/write (Phase 3)
+    match /utangRecords/{utangId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Feedback — write only
+    match /feedback/{responseId} {
+      allow read: if false;
+      allow write: if true;
+    }
+  }
+}
