@@ -15,8 +15,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32v1-none
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -25,7 +23,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             contracts/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('contracts/**/*.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Run contract tests

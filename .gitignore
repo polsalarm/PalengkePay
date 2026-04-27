@@ -41,7 +41,7 @@ frontend/dist/sw.js
 frontend/dist/workbox-*.js
 
 # Rust / Soroban contracts
-contracts/target/
+**/target/
 **/*.wasm
 Cargo.lock
 
