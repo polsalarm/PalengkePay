@@ -64,13 +64,15 @@ PalengkePay puts a Stellar wallet in every vendor's pocket and a QR code on ever
 
 ## Contracts
 
-| Contract | Purpose |
-|----------|---------|
-| `VendorRegistry` | Vendor registration, apply/approve/reject/deactivate, profiles |
-| `PalengkePayment` | QR-based payments with fee support and stat tracking |
-| `UTangEscrow` | BNPL installment agreements — create, pay, complete, default |
+| Contract | Contract ID | Purpose |
+|----------|-------------|---------|
+| `VendorRegistry` | `CA5QQ2SE4XTBX3K4XNHLNAL36GIJOJ3KXYDS2VLAYZC4Q5FAYMDWZUJH` | Vendor registration, apply/approve/reject/deactivate, profiles |
+| `PalengkePayment` | `CCVHL724CBAKIBEM2BMWUV35FXXV2TESWC3ZK3UQVLUEGCQ7LNN6ZUNF` | QR-based payments with fee support and stat tracking |
+| `UTangEscrow` | `CD2VU3FLA473TCD67TBYXTQROWLJUUWVNPK56CMWBS6GW3N3ZO4JM5BG` | BNPL installment agreements — create, pay, complete, default |
 
 All deployed on Stellar Testnet. See [`docs/contract-deployment.md`](docs/contract-deployment.md) for deployment guide.
+
+> **Note:** Stellar Testnet resets periodically (~quarterly). Contract IDs above are from the last deployment (April 2026). After a reset, redeploy via `docs/contract-deployment.md` and update `.env.local` and this table.
 
 ---
 
@@ -130,9 +132,9 @@ Create `frontend/.env.local`:
 ```env
 VITE_STELLAR_NETWORK=testnet
 VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-VITE_VENDOR_REGISTRY_CONTRACT_ID=C...
-VITE_PALENGKE_PAYMENT_CONTRACT_ID=C...
-VITE_UTANG_ESCROW_CONTRACT_ID=C...
+VITE_VENDOR_REGISTRY_CONTRACT_ID=CA5QQ2SE4XTBX3K4XNHLNAL36GIJOJ3KXYDS2VLAYZC4Q5FAYMDWZUJH
+VITE_PALENGKE_PAYMENT_CONTRACT_ID=CCVHL724CBAKIBEM2BMWUV35FXXV2TESWC3ZK3UQVLUEGCQ7LNN6ZUNF
+VITE_UTANG_ESCROW_CONTRACT_ID=CD2VU3FLA473TCD67TBYXTQROWLJUUWVNPK56CMWBS6GW3N3ZO4JM5BG
 VITE_UTANG_FEE_XLM=1
 ```
 
