@@ -15,6 +15,22 @@
         { "fieldPath": "customerWallet", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "utangRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vendorWallet", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "utangRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "customerWallet", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
