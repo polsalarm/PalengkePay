@@ -32,19 +32,19 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 
 ### Landing
 
-<img src="UI/WEB/land1.png" alt="Landing — hero" width="100%" />
+<img src="UI/WEB/landing/land1.png" alt="Landing — hero" width="100%" />
 
-<img src="UI/WEB/land2.png" alt="Landing — features" width="100%" />
+<img src="UI/WEB/landing/land2.png" alt="Landing — features" width="100%" />
 
-<img src="UI/WEB/land3.png" alt="Landing — how it works" width="100%" />
+<img src="UI/WEB/landing/land3.png" alt="Landing — how it works" width="100%" />
 
-<img src="UI/WEB/land4.png" alt="Landing — footer" width="100%" />
+<img src="UI/WEB/landing/land4.png" alt="Landing — footer" width="100%" />
 
 ---
 
 ### Connect Wallet
 
-<img src="UI/WEB/connect1.png" alt="Connect wallet" width="100%" />
+<img src="UI/WEB/onboard/connect1.png" alt="Connect wallet" width="100%" />
 
 ---
 
@@ -52,7 +52,7 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 
 | Get a Wallet | Connect | Fund | You're Ready |
 |:---:|:---:|:---:|:---:|
-| <img src="UI/WEB/onboard.png" alt="Step 1 — Get wallet" width="220" /> | <img src="UI/WEB/onboard1.png" alt="Step 2 — Connect" width="220" /> | <img src="UI/WEB/onboard2.png" alt="Step 3 — Fund" width="220" /> | <img src="UI/WEB/onbaord3.png" alt="Step 4 — Ready" width="220" /> |
+| <img src="UI/WEB/onboard/onboard.png" alt="Step 1 — Get wallet" width="220" /> | <img src="UI/WEB/onboard/onboard1.png" alt="Step 2 — Connect" width="220" /> | <img src="UI/WEB/onboard/onboard2.png" alt="Step 3 — Fund" width="220" /> | <img src="UI/WEB/onboard/onbaord3.png" alt="Step 4 — Ready" width="220" /> |
 
 ---
 
