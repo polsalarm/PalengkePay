@@ -163,13 +163,13 @@ export function VendorHome() {
             </div>
 
             <div
-              className="shrink-0 rounded-2xl px-4 py-3 text-right"
+              className="shrink-0 rounded-2xl px-3 py-2.5 text-right max-w-[110px]"
               style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}
             >
               <p className="text-xs font-semibold mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Wallet</p>
               <p
-                className="font-black text-white"
-                style={{ fontSize: '1.6rem', fontFamily: "'Syne', sans-serif" }}
+                className="font-black text-white truncate"
+                style={{ fontSize: 'clamp(1rem, 4.5vw, 1.4rem)', fontFamily: "'Syne', sans-serif" }}
               >
                 {balance ? parseFloat(balance).toFixed(2) : '—'}
               </p>
