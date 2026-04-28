@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { useWallet } from '../lib/hooks/useWallet';
@@ -15,12 +15,15 @@ export function Connect() {
   const { isConnected, connect, isConnecting } = useWallet();
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState<string | null>(null);
+  const attempted = useRef(false);
 
+  // Only redirect after explicit user click — not on mount
   useEffect(() => {
-    if (isConnected) navigate('/dashboard');
+    if (isConnected && attempted.current) navigate('/onboard');
   }, [isConnected, navigate]);
 
   const handleWalletClick = async (id: string) => {
+    attempted.current = true;
     setConnecting(id);
     await connect();
     setConnecting(null);
@@ -158,15 +161,13 @@ export function Connect() {
             {/* No wallet CTA */}
             <div className="text-center">
               <p className="text-xs text-slate-400">Don't have a wallet yet?</p>
-              <a
-                href="https://www.freighter.app/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => navigate('/onboard')}
                 className="text-xs font-semibold hover:underline transition-colors"
                 style={{ color: '#0F766E' }}
               >
                 Get started with Freighter →
-              </a>
+              </button>
             </div>
           </div>
         </div>
