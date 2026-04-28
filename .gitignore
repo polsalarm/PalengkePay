@@ -53,7 +53,13 @@ firestore-debug.log
 # Misc
 *.log
 coverage/
+image.png
 
+# Internal docs and planning files
+docs/
+UI_UX_IMPROVEMENTS.md
+frontend/README.md
+contracts/README.md
 
 # Claude Code local config — personal, not project files
 .claude/
