@@ -49,7 +49,8 @@ export function Landing() {
               className="flex items-center gap-2 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm hover:opacity-90"
               style={{ backgroundColor: '#0F766E' }}
             >
-              Get Started — It's Free
+              <span className="sm:hidden">Get Started</span>
+              <span className="hidden sm:inline">Get Started — It's Free</span>
             </button>
           </div>
         </div>
