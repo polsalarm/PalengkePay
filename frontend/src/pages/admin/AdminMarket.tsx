@@ -126,6 +126,9 @@ function VendorCard({
               {PRODUCT_EMOJIS[vendor.productType] ?? '🛒'} {vendor.productType}
             </span>
           </div>
+          {vendor.phone && (
+            <p className="text-sm text-slate-500 mt-1">📞 {vendor.phone}</p>
+          )}
         </div>
       </div>
 
