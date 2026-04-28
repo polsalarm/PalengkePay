@@ -95,6 +95,45 @@ All deployed on Stellar Testnet. See [`docs/contract-deployment.md`](docs/contra
 
 ---
 
+## Mobile Usage (Vendors & Customers)
+
+PalengkePay is a PWA — open it in your phone's browser, no app store needed.
+
+### Step 1 — Install LOBSTR
+
+LOBSTR is the mobile Stellar wallet used to connect to PalengkePay.
+
+- **Android:** [Play Store → LOBSTR](https://play.google.com/store/apps/details?id=com.lobstr.client)
+- **iOS:** [App Store → LOBSTR](https://apps.apple.com/app/lobstr-stellar-wallet/id1357511383)
+
+Create a new wallet inside LOBSTR and **save your recovery phrase**.
+
+### Step 2 — Get Testnet XLM
+
+PalengkePay currently runs on Stellar Testnet. Fund your wallet with free testnet XLM:
+
+1. Copy your Stellar address from LOBSTR
+2. Open [Stellar Friendbot](https://friendbot.stellar.org/?addr=YOUR_ADDRESS) — replace `YOUR_ADDRESS` with your address
+3. You'll receive 10,000 testnet XLM
+
+### Step 3 — Connect on Mobile
+
+1. Open PalengkePay in your phone's browser
+2. Tap **Connect Wallet**
+3. Select **WalletConnect** from the modal
+4. Tap **Open in LOBSTR** (deep link — no QR scan needed on mobile)
+5. Approve the connection inside LOBSTR
+6. Done — you're connected
+
+### Install as PWA (Optional)
+
+- **Android (Chrome):** Tap ⋮ → *Add to Home screen*
+- **iOS (Safari):** Tap Share → *Add to Home Screen*
+
+PalengkePay then works like a native app with an icon on your home screen.
+
+---
+
 ## Local Setup
 
 ### Prerequisites
@@ -102,7 +141,8 @@ All deployed on Stellar Testnet. See [`docs/contract-deployment.md`](docs/contra
 - Node.js 20+
 - Rust + `wasm32v1-none` target
 - [stellar-cli](https://github.com/stellar/stellar-cli) 25.2+
-- [Freighter wallet](https://www.freighter.app/) browser extension
+- Desktop: [Freighter wallet](https://www.freighter.app/) browser extension
+- Mobile: [LOBSTR](https://lobstr.co/) app (WalletConnect)
 
 ### Frontend
 
@@ -147,7 +187,7 @@ VITE_UTANG_FEE_XLM=1
 | Layer | Tech |
 |-------|------|
 | Frontend | React 19 + Vite 8 + TypeScript + Tailwind CSS v4 |
-| Wallet | `@creit.tech/stellar-wallets-kit` (Freighter, LOBSTR, xBull, Albedo) |
+| Wallet | `@creit.tech/stellar-wallets-kit` — WalletConnect (mobile via LOBSTR), Freighter/xBull/Albedo (desktop) |
 | Blockchain | Stellar Testnet + Soroban smart contracts (Rust, soroban-sdk 22.x) |
 | QR | `qrcode.react` (generate) + `html5-qrcode` (scan) |
 | PWA | `vite-plugin-pwa` + Workbox |
