@@ -12,6 +12,26 @@
 
 ---
 
+## 🔗 Live Demo
+
+**[palengke-pay.vercel.app](https://palengke-pay.vercel.app)**
+
+## 🎥 Demo Video
+
+> _Full MVP walkthrough — coming soon. Will cover: landing → onboarding → vendor QR → customer payment → utang flow → admin dashboard._
+
+## 📋 Level Checklist
+
+See [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for full MVP completion checklist.
+
+## 📊 User Feedback
+
+Beta users were onboarded via a Google Form collecting name, email, wallet address, and product rating.
+
+**[View Feedback Responses (Google Sheets) →](https://docs.google.com/spreadsheets/d/1g0AYRCwqc1-zcxy2q5UnIGHtllJHsXSaUvTCD7POI-g/edit?usp=sharing)**
+
+---
+
 ## Screenshots
 
 ### Desktop
@@ -229,6 +249,27 @@ The following wallets connected to the app and tested core functionality on Stel
 | 4 | Vendor | `GCFFUUKXBQK4MCVDBIIKRWWPBP5DPYSQ6YY6LQSI3W5I4GSNQ267VV3B` | [View on Stellar Expert →](https://stellar.expert/explorer/testnet/account/GCFFUUKXBQK4MCVDBIIKRWWPBP5DPYSQ6YY6LQSI3W5I4GSNQ267VV3B) |
 | 5 | Vendor | `GBVCJE6ZXKIROQ5GVRX4TLGC5U4MJNSZYK4BTBFRI6TIW3RD3KHUBOP4` | [View on Stellar Expert →](https://stellar.expert/explorer/testnet/account/GBVCJE6ZXKIROQ5GVRX4TLGC5U4MJNSZYK4BTBFRI6TIW3RD3KHUBOP4) |
 | 6 | Vendor | `GBH4SBWR6WUWBGS2BYT7FNHJY7SVJ5M5ES7POPX6WKPNLSZD4D5Q2WZF` | [View on Stellar Expert →](https://stellar.expert/explorer/testnet/account/GBH4SBWR6WUWBGS2BYT7FNHJY7SVJ5M5ES7POPX6WKPNLSZD4D5Q2WZF) |
+
+---
+
+## Next Phase — Improvements Based on User Feedback
+
+The following improvements are planned for Phase 2, derived directly from beta user feedback collected via the Google Form above.
+
+### UI / UX
+- **Peso (PHP) display alongside XLM** — users unfamiliar with XLM amounts requested a live PHP conversion using a public exchange rate API. Commit: [`1039c68`](https://github.com/polsalarm/PalengkePay/commit/1039c68) _(Phase 1 redesign laid the groundwork for the balance hero)_
+- **Push notifications on mobile** — vendors reported missing payment alerts when the app is backgrounded. Will implement Web Push via service worker.
+- **Vendor search / filter in market directory** — customers want to find vendors by product type or stall number faster.
+
+### Features
+- **Recurring utang reminders** — customers requested in-app due date reminders before installments are due, not just after they're overdue.
+- **QR print-ready layout** — vendors want a printer-friendly QR page (A5 sticker format) they can paste on their stall. Builds on the download QR feature in commit [`dfcb790`](https://github.com/polsalarm/PalengkePay/commit/dfcb790).
+- **Partial payment support** — some customers requested paying more than one installment at a time to close their utang early.
+
+### Technical
+- **Mainnet deployment** — migrate from Stellar Testnet to Mainnet once contracts are audited. Contract architecture is already production-ready (commit [`8c305b4`](https://github.com/polsalarm/PalengkePay/commit/8c305b4) fixed prod white-screen for WalletConnect).
+- **Firebase / Supabase off-chain layer** — store vendor metadata and push notification tokens off-chain to reduce Soroban RPC calls and improve load time.
+- **Multi-language (Filipino / English)** — EN·TL toggle already stubbed in the UI; wire up `i18n` library with full Tagalog translations.
 
 ---
 
