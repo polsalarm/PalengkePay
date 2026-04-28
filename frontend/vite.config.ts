@@ -4,6 +4,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  optimizeDeps: {
+    include: [
+      '@walletconnect/sign-client',
+      '@reown/appkit',
+      '@reown/appkit/core',
+    ],
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -20,13 +27,13 @@ export default defineConfig({
         scope: '/',
         start_url: '/',
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+          { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4MB — Stellar SDK is large
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
   ],
