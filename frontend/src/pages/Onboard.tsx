@@ -1,266 +1,428 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, Wallet, Droplets, PartyPopper, CheckCircle, Loader2, ExternalLink, ArrowRight, ArrowLeft, QrCode, ScanLine } from 'lucide-react';
+import {
+  ShieldCheck, Wallet, QrCode, ScanLine,
+  Check, Copy, ArrowRight, Loader2, ExternalLink,
+} from 'lucide-react';
 import { useWallet } from '../lib/hooks/useWallet';
 import { useBalance } from '../lib/hooks/useBalance';
 
-const STEPS = ['Install Wallet', 'Connect', 'Get XLM', "Ready!"];
-
-const CONFETTI_COLORS = ['#0F766E', '#14B8A6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
-
-function Confetti() {
-  const pieces = useMemo(() =>
-    Array.from({ length: 28 }, (_, i) => ({
-      id: i,
-      left: `${3 + (i * 3.4) % 94}%`,
-      delay: `${(i * 0.12) % 2}s`,
-      duration: `${1.4 + (i * 0.09) % 1.6}s`,
-      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      width: i % 3 === 0 ? '10px' : i % 3 === 1 ? '7px' : '5px',
-      height: i % 4 === 0 ? '14px' : '8px',
-    })), []
-  );
-
-  return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">
-      {pieces.map((p) => (
-        <div
-          key={p.id}
-          className="absolute rounded-sm animate-confetti"
-          style={{
-            left: p.left,
-            top: '-20px',
-            width: p.width,
-            height: p.height,
-            backgroundColor: p.color,
-            animationDelay: p.delay,
-            animationDuration: p.duration,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+const STEPS = ['Get wallet', 'Connect', 'Fund', "Let's go!"];
 
 export function Onboard() {
-  const [step, setStep] = useState(0);
-  const { address, isConnected, connect, isConnecting } = useWallet();
+  const { address, connect, isConnecting, error: walletError } = useWallet();
   const { balance, refetch } = useBalance(address);
   const navigate = useNavigate();
 
-  // Auto-advance when wallet connects on step 1
-  useEffect(() => {
-    if (step === 1 && isConnected) setStep(2);
-  }, [isConnected, step]);
+  const [step, setStep]           = useState(0);
+  const [copied, setCopied]       = useState(false);
+  const [funding, setFunding]     = useState(false);
+  const [funded, setFunded]       = useState(false);
+  const [fundErr, setFundErr]     = useState<string | null>(null);
+  const [justConnected, setJustConnected] = useState(false);
 
-  // Auto-check balance after 5s on step 2
-  useEffect(() => {
-    if (step === 2 && address) {
-      const timer = setTimeout(() => refetch(), 5000);
-      return () => clearTimeout(timer);
+  const handleConnect = async () => {
+    try {
+      await connect();
+      // connect() only resolves if authModal + signMessage both succeeded
+      setJustConnected(true);
+    } catch {
+      // walletError state handled by WalletProvider
     }
-  }, [step, address, refetch]);
+  };
 
-  const hasBalance = balance !== null && parseFloat(balance) > 0;
-  const progressPct = step === 0 ? 2 : (step / (STEPS.length - 1)) * 100;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-slate-50 flex items-center justify-center px-4 py-12">
-      {step === 3 && <Confetti />}
+  const copyAddress = async () => {
+    if (!address) return;
+    await navigator.clipboard.writeText(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-      <div className="w-full max-w-lg">
-        {/* Progress bar with step labels */}
-        <div className="mb-8">
-          <div className="flex justify-between mb-2">
-            {STEPS.map((name, i) => (
-              <span
-                key={i}
-                className={`text-xs font-semibold transition-colors duration-300 ${
-                  i <= step ? 'text-teal-700' : 'text-slate-300'
-                }`}
-              >
-                {name}
-              </span>
+  const fundWallet = async () => {
+    if (!address) return;
+    setFunding(true);
+    setFundErr(null);
+    try {
+      const res = await fetch(`https://friendbot.stellar.org/?addr=${encodeURIComponent(address)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { detail?: string };
+        // Already funded = still a success
+        if (!body.detail?.includes('createAccountAlreadyExist')) {
+          throw new Error(body.detail ?? 'Friendbot failed');
+        }
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+      await refetch();
+      setFunded(true);
+    } catch (e: unknown) {
+      setFundErr((e as Error).message ?? 'Failed to fund wallet');
+    } finally {
+      setFunding(false);
+    }
+  };
+
+  const hasBalance = funded || (balance !== null && parseFloat(balance) > 0);
+  const truncAddr  = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : '';
+
+  // ── Shared: left panel sidebar ──────────────────────────────────────────
+  const LeftPanel = () => (
+    <div
+      className="hidden lg:flex flex-col justify-between w-[42%] shrink-0 p-10 xl:p-14"
+      style={{ backgroundColor: '#0A3D38' }}
+    >
+      {/* Logo */}
+      <div className="flex items-center gap-2.5">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white"
+          style={{ backgroundColor: 'rgba(255,255,255,0.12)', fontSize: '1.1rem' }}
+        >₱</div>
+        <span className="font-black text-white text-lg" style={{ fontFamily: "'Syne', sans-serif" }}>
+          PalengkePay
+        </span>
+      </div>
+
+      {/* Step 0: checklist */}
+      {step === 0 && (
+        <div>
+          <h2
+            className="font-black text-white mb-4 leading-tight"
+            style={{ fontSize: 'clamp(1.8rem, 3vw, 2.5rem)', fontFamily: "'Syne', sans-serif" }}
+          >
+            Four steps.<br />Three minutes.
+          </h2>
+          <p className="text-sm mb-8 leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            Let's finish your setup. After this, you can start accepting payments.
+          </p>
+          <div className="space-y-4">
+            {[
+              { n: 1, label: 'First, get a wallet',  active: true  },
+              { n: 2, label: 'Connect your wallet',  active: false },
+              { n: 3, label: 'Get free test money',  active: false },
+              { n: 4, label: "You're ready!",         active: false },
+            ].map(({ n, label, active }) => (
+              <div key={n} className="flex items-center gap-3">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all"
+                  style={active
+                    ? { backgroundColor: '#14B8A6', color: 'white' }
+                    : { backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.25)' }}
+                >{n}</div>
+                <span
+                  className="text-sm font-medium transition-all"
+                  style={{ color: active ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)' }}
+                >{label}</span>
+              </div>
             ))}
           </div>
-          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-teal-500 to-teal-700 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progressPct}%` }}
-            />
+        </div>
+      )}
+
+      {/* Steps 1-3: testimonial */}
+      {step > 0 && (
+        <div>
+          <h2
+            className="font-black text-white mb-4 leading-tight"
+            style={{ fontSize: 'clamp(1.8rem, 3vw, 2.5rem)', fontFamily: "'Syne', sans-serif" }}
+          >
+            Step into the<br />digital palengke.
+          </h2>
+          <p className="text-sm leading-relaxed mb-8" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            12,400+ vendors already accept XLM.<br />Every transaction settles in 3 seconds.
+          </p>
+          <div
+            className="rounded-2xl p-5"
+            style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <p className="text-sm leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              "Before, I was always short on change. Now they just scan.{' '}
+              <span className="font-bold text-white">Faster and safer.</span>"
+            </p>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                style={{ backgroundColor: '#14B8A6', color: 'white' }}
+              >AN</div>
+              <div>
+                <p className="text-xs font-bold text-white">Aling Nena</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Gulayan · Marikina Public Market</p>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          <p className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-1">
-            Step {step + 1} of {STEPS.length}
-          </p>
+      {/* Footer */}
+      <div className="flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        <ShieldCheck size={13} style={{ color: '#4ADE80' }} />
+        <span className="text-xs font-medium">Secured by Stellar Testnet</span>
+      </div>
+    </div>
+  );
 
-          {/* Animated step content — key triggers CSS fade-slide on change */}
-          <div key={step} className="animate-fade-slide">
+  // ── Shared: top bar ─────────────────────────────────────────────────────
+  const TopBar = () => (
+    <div
+      className="flex items-center justify-between px-6 lg:px-12 py-4 border-b"
+      style={{ borderColor: 'rgba(0,0,0,0.06)' }}
+    >
+      <div className="flex items-center gap-2.5">
+        {STEPS.map((_, i) => (
+          <div
+            key={i}
+            className="h-1 rounded-full transition-all duration-500"
+            style={{
+              width: i === step ? 28 : 18,
+              backgroundColor: i <= step ? '#0F766E' : '#CBD5E1',
+              opacity: i > step ? 0.45 : 1,
+            }}
+          />
+        ))}
+        <span className="ml-1 text-xs font-semibold text-slate-400">Step {step + 1} of {STEPS.length}</span>
+      </div>
+      <div
+        className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold"
+        style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#64748B' }}
+      >
+        <span className="text-slate-900">EN</span>
+        <span className="text-slate-300 mx-0.5">·</span>
+        <span>TL</span>
+      </div>
+    </div>
+  );
 
-            {/* Step 0: Install Wallet */}
+  return (
+    <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <LeftPanel />
+
+      {/* ── Right panel ──────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col" style={{ backgroundColor: '#FAFAF7' }}>
+        <TopBar />
+
+        <div className="flex-1 flex items-center justify-center px-6 py-12">
+          <div className="w-full max-w-md" key={step}>
+
+            {/* ── Step 0: Get a wallet ── */}
             {step === 0 && (
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Download size={22} className="text-teal-700" />
-                  <h2 className="text-xl font-bold text-slate-900">Install a Wallet</h2>
-                </div>
-                <p className="text-sm text-slate-500 mb-6">
-                  You need a Stellar wallet to use PalengkePay. Freighter for desktop, Lobstr for mobile.
+                <h1
+                  className="font-black text-slate-900 mb-2 tracking-tight"
+                  style={{ fontSize: '2rem', fontFamily: "'Syne', sans-serif" }}
+                >First, get a wallet</h1>
+                <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+                  A wallet is where your payments go. It takes 2 minutes to set up.
                 </p>
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <a
-                    href="https://www.freighter.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-teal-50 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                      <span className="text-indigo-600 font-bold text-sm">F</span>
+
+                <div className="space-y-3 mb-8">
+                  {/* Freighter */}
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
+                      style={{ backgroundColor: '#EEF2FF', color: '#4F46E5' }}
+                    >F</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-bold text-slate-900">Freighter</p>
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #CCFBF1' }}
+                        >Recommended</span>
+                      </div>
+                      <p className="text-xs text-slate-400">Best for desktop and laptop</p>
                     </div>
-                    <span className="text-sm font-semibold text-slate-700">Freighter</span>
-                    <span className="text-xs text-slate-400">Desktop extension</span>
-                    <ExternalLink size={12} className="text-slate-300 group-hover:text-teal-600 transition-colors" />
-                  </a>
-                  <a
-                    href="https://lobstr.co/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-teal-50 transition-all group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-600 font-bold text-sm">L</span>
+                    <a
+                      href="https://www.freighter.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl text-white transition-all hover:opacity-90 active:scale-95"
+                      style={{ backgroundColor: '#0F766E' }}
+                    >
+                      Install <ExternalLink size={11} />
+                    </a>
+                  </div>
+
+                  {/* Lobstr */}
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
+                      style={{ backgroundColor: '#F0F9FF', color: '#0EA5E9' }}
+                    >L</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900 mb-0.5">Lobstr</p>
+                      <p className="text-xs text-slate-400">Best for mobile phone users</p>
                     </div>
-                    <span className="text-sm font-semibold text-slate-700">Lobstr</span>
-                    <span className="text-xs text-slate-400">Mobile app</span>
-                    <ExternalLink size={12} className="text-slate-300 group-hover:text-teal-600 transition-colors" />
-                  </a>
+                    <a
+                      href="https://lobstr.co/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
+                    >
+                      Download <ExternalLink size={11} />
+                    </a>
+                  </div>
                 </div>
-                <div className="flex gap-3">
+
+                <div className="flex items-center justify-between">
                   <button
                     onClick={() => setStep(1)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-3 rounded-lg transition-all"
+                    className="text-sm font-semibold transition-colors hover:opacity-80"
+                    style={{ color: '#0F766E' }}
+                  >
+                    I already have a wallet
+                  </button>
+                  <button
+                    onClick={() => setStep(1)}
+                    className="flex items-center gap-2 font-bold px-6 py-3 rounded-2xl text-white transition-all hover:opacity-90 active:scale-95"
+                    style={{ backgroundColor: '#0F766E' }}
                   >
                     Next <ArrowRight size={16} />
                   </button>
-                  <button
-                    onClick={() => setStep(1)}
-                    className="text-sm text-slate-400 hover:text-slate-600 px-4 transition-colors"
-                  >
-                    I already have one
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* Step 1: Connect Wallet */}
+            {/* ── Step 1: Connect wallet ── */}
             {step === 1 && (
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Wallet size={22} className="text-teal-700" />
-                  <h2 className="text-xl font-bold text-slate-900">Connect Your Wallet</h2>
+                {/* Link icon */}
+                <div
+                  className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-8"
+                  style={{ backgroundColor: '#F0FDFA', border: '2px dashed #99F6E4' }}
+                >
+                  <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 22C17.657 24.343 21.343 24.343 23 22L27 18C28.657 15.657 28.657 12.343 27 10C25.343 7.657 22.029 7.657 20 10L18.5 11.5" stroke="#0F766E" strokeWidth="2.5" strokeLinecap="round"/>
+                    <path d="M22 16C20.343 13.657 16.657 13.657 15 16L11 20C9.343 22.343 9.343 25.657 11 28C12.657 30.343 15.971 30.343 18 28L19.5 26.5" stroke="#0F766E" strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
                 </div>
-                <p className="text-sm text-slate-500 mb-6">
-                  Tap below to open the wallet picker and connect your Stellar wallet.
+
+                <h1
+                  className="font-black text-slate-900 mb-2 tracking-tight text-center"
+                  style={{ fontSize: '2rem', fontFamily: "'Syne', sans-serif" }}
+                >Connect your wallet</h1>
+                <p className="text-sm text-slate-500 mb-8 leading-relaxed text-center">
+                  PalengkePay can see your balance and send payments —<br />
+                  but you approve every transaction.
                 </p>
 
-                {isConnected ? (
-                  <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                    <CheckCircle size={20} className="text-green-600 shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-green-700">Wallet connected!</p>
-                      <p className="text-xs text-green-600 font-mono">{address}</p>
-                    </div>
+                <button
+                  onClick={handleConnect}
+                  disabled={isConnecting}
+                  className="w-full flex items-center justify-center gap-2.5 font-bold py-4 rounded-2xl text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 mb-3"
+                  style={{ backgroundColor: '#0F766E', fontSize: '1rem' }}
+                >
+                  {isConnecting
+                    ? <Loader2 size={18} className="animate-spin" />
+                    : <Wallet size={18} />}
+                  {isConnecting ? 'Connecting…' : 'Connect Wallet'}
+                </button>
+
+                <p className="text-xs text-slate-400 text-center mb-4">
+                  A wallet picker will appear — select Freighter, then approve in the extension popup.
+                </p>
+
+                {walletError && (
+                  <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700 mb-4">
+                    {walletError}
                   </div>
-                ) : (
-                  <button
-                    onClick={connect}
-                    disabled={isConnecting}
-                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-3 rounded-lg transition-all mb-4 disabled:opacity-60"
-                  >
-                    {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Wallet size={18} />}
-                    {isConnecting ? 'Connecting…' : 'Connect Wallet'}
-                  </button>
                 )}
 
-                <div className="flex gap-3">
+                {justConnected && address && (
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+                    <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
+                      <Check size={14} className="text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-green-700">Connected</p>
+                      <p className="text-xs text-green-600 font-mono truncate">{address}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end mt-2">
                   <button
-                    onClick={() => setStep(0)}
-                    className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 transition-colors"
+                    onClick={() => setStep(2)}
+                    className="flex items-center gap-2 font-bold px-6 py-3 rounded-2xl text-white transition-all hover:opacity-90 active:scale-95"
+                    style={{ backgroundColor: '#0F766E' }}
                   >
-                    <ArrowLeft size={14} /> Back
+                    Next <ArrowRight size={16} />
                   </button>
-                  {isConnected && (
-                    <button
-                      onClick={() => setStep(2)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-2.5 rounded-lg transition-all"
-                    >
-                      Next <ArrowRight size={16} />
-                    </button>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* Step 2: Get Test XLM */}
+            {/* ── Step 2: Fund wallet ── */}
             {step === 2 && (
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Droplets size={22} className="text-teal-700" />
-                  <h2 className="text-xl font-bold text-slate-900">Get Free Test XLM</h2>
+                {/* Coin icon */}
+                <div
+                  className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-8"
+                  style={{ backgroundColor: '#F0FDFA', border: '2px dashed #99F6E4' }}
+                >
+                  <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="19" cy="19" r="11" stroke="#0F766E" strokeWidth="2.5"/>
+                    <path d="M19 10V28" stroke="#0F766E" strokeWidth="2" strokeLinecap="round"/>
+                    <path d="M14 14.5C14 14.5 15.5 12 19 12C22.5 12 25 14 25 16.5C25 19 22.5 20 19 20C15.5 20 13 21.5 13 24.5C13 27 15.5 28.5 19 28.5C22.5 28.5 25 26.5 25 26.5" stroke="#0F766E" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
                 </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-amber-700 font-medium">
-                    Stellar Testnet — play money only. No real funds.
-                  </p>
-                </div>
-                <p className="text-sm text-slate-500 mb-5">
-                  Fund your testnet wallet with 10,000 XLM from the Stellar Friendbot.
+
+                <h1
+                  className="font-black text-slate-900 mb-2 tracking-tight text-center"
+                  style={{ fontSize: '2rem', fontFamily: "'Syne', sans-serif" }}
+                >Get free test money</h1>
+                <p className="text-sm text-slate-500 mb-6 leading-relaxed text-center">
+                  We're on Stellar Testnet — this is play money for testing.<br />Real payments come later.
                 </p>
 
                 {address && (
-                  <a
-                    href={`https://friendbot.stellar.org/?addr=${address}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-3 rounded-lg transition-all mb-4"
-                    onClick={() => setTimeout(() => refetch(), 5000)}
-                  >
-                    <Droplets size={18} />
-                    Fund with Friendbot
-                    <ExternalLink size={14} />
-                  </a>
+                  <div className="mb-6">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Your address</p>
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-white border border-slate-200">
+                      <p className="flex-1 text-xs font-mono text-slate-600 truncate">{address}</p>
+                      <button
+                        onClick={copyAddress}
+                        className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-slate-100"
+                        style={{ color: copied ? '#0F766E' : '#94A3B8' }}
+                      >
+                        {copied ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 text-center mt-2">
+                      We'll send 10,000 test XLM to your wallet. It's free!
+                    </p>
+                  </div>
                 )}
 
                 {hasBalance ? (
-                  <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                    <CheckCircle size={20} className="text-green-600 shrink-0" />
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl p-4 mb-6">
+                    <div className="w-9 h-9 rounded-xl bg-green-500 flex items-center justify-center shrink-0">
+                      <Check size={18} className="text-white" />
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold text-green-700">Balance received!</p>
-                      <p className="text-xs text-green-600">{balance} XLM on testnet</p>
+                      <p className="text-sm font-bold text-green-700">Funded!</p>
+                      <p className="text-xs text-green-600">{balance} XLM received</p>
                     </div>
                   </div>
                 ) : (
                   <button
-                    onClick={() => refetch()}
-                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-teal-600 transition-colors mb-4"
+                    onClick={fundWallet}
+                    disabled={funding || !address}
+                    className="w-full flex items-center justify-center gap-2.5 font-bold py-4 rounded-2xl text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-60 mb-2"
+                    style={{ backgroundColor: '#0F766E', fontSize: '1rem' }}
                   >
-                    <Loader2 size={14} />
-                    Check balance
+                    {funding ? <Loader2 size={18} className="animate-spin" /> : '💧'}
+                    {funding ? 'Funding wallet…' : 'Get Test XLM'}
                   </button>
                 )}
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    <ArrowLeft size={14} /> Back
-                  </button>
+                {fundErr && (
+                  <p className="text-xs text-rose-600 text-center mb-3">{fundErr}</p>
+                )}
+
+                <div className="flex justify-end mt-4">
                   <button
                     onClick={() => setStep(3)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-2.5 rounded-lg transition-all"
+                    className="flex items-center gap-2 font-bold px-6 py-3 rounded-2xl text-white transition-all hover:opacity-90 active:scale-95"
+                    style={{ backgroundColor: '#0F766E' }}
                   >
                     {hasBalance ? 'Continue' : 'Skip for now'} <ArrowRight size={16} />
                   </button>
@@ -268,52 +430,98 @@ export function Onboard() {
               </div>
             )}
 
-            {/* Step 3: Ready — with confetti */}
+            {/* ── Step 3: Ready ── */}
             {step === 3 && (
-              <div className="text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-lg">
-                    <PartyPopper size={34} className="text-white" />
-                  </div>
+              <div>
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                  style={{ backgroundColor: '#22C55E', boxShadow: '0 8px 32px rgba(34,197,94,0.35)' }}
+                >
+                  <Check size={36} className="text-white" strokeWidth={3} />
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 mb-1">You're Ready!</h2>
-                <p className="text-sm text-slate-500 mb-1">Wallet connected and funded.</p>
-                {balance && (
-                  <p className="text-3xl font-black text-teal-700 mb-6">{balance} XLM</p>
-                )}
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">How will you use PalengkePay?</p>
-                <div className="grid grid-cols-2 gap-3 mb-5">
+
+                <h1
+                  className="font-black text-slate-900 mb-2 tracking-tight text-center"
+                  style={{ fontSize: '2rem', fontFamily: "'Syne', sans-serif" }}
+                >You're ready!</h1>
+                <p className="text-sm text-slate-500 mb-6 text-center leading-relaxed">
+                  PalengkePay is set up. Choose your role to get started.
+                </p>
+
+                {/* Summary */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6 space-y-0 divide-y divide-slate-100">
+                  <div className="flex items-center justify-between pb-3">
+                    <span className="text-xs text-slate-400 font-medium">Wallet</span>
+                    <span className="text-sm font-mono font-bold text-slate-700">{truncAddr}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-xs text-slate-400 font-medium">Network</span>
+                    <span
+                      className="text-xs font-bold px-2.5 py-1 rounded-full"
+                      style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}
+                    >Stellar Testnet</span>
+                  </div>
+                  {balance && (
+                    <div className="flex items-center justify-between pt-3">
+                      <span className="text-xs text-slate-400 font-medium">Balance</span>
+                      <span className="text-sm font-black text-slate-800">
+                        {parseFloat(balance).toLocaleString('en-PH', { minimumFractionDigits: 2 })}{' '}
+                        <span className="text-xs text-slate-400 font-medium">XLM</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Role cards */}
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => navigate('/vendor/apply')}
-                    className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-teal-200 bg-teal-50 hover:border-teal-400 hover:bg-teal-100 active:scale-95 transition-all"
+                    className="flex flex-col items-start gap-3 p-5 rounded-2xl border-2 bg-white transition-all hover:shadow-md active:scale-95 text-left"
+                    style={{ borderColor: '#CCFBF1' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0F766E'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#CCFBF1'; }}
                   >
-                    <div className="w-12 h-12 rounded-full bg-teal-700 flex items-center justify-center">
-                      <QrCode size={20} className="text-white" />
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#F0FDFA' }}>
+                      <QrCode size={22} style={{ color: '#0F766E' }} />
                     </div>
-                    <span className="text-sm font-bold text-teal-800">I'm a Vendor</span>
-                    <span className="text-xs text-teal-600">Accept payments</span>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">I'm a Vendor</p>
+                      <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                        I sell goods at the palengke and want to accept payments
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold" style={{ color: '#0F766E' }}>e.g. Aling Nena</p>
                   </button>
+
                   <button
                     onClick={() => navigate('/customer/home')}
-                    className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100 active:scale-95 transition-all"
+                    className="flex flex-col items-start gap-3 p-5 rounded-2xl border-2 bg-white transition-all hover:shadow-md active:scale-95 text-left"
+                    style={{ borderColor: '#E2E8F0' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94A3B8'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; }}
                   >
-                    <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center">
-                      <ScanLine size={20} className="text-white" />
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#F8FAFC' }}>
+                      <ScanLine size={22} style={{ color: '#475569' }} />
                     </div>
-                    <span className="text-sm font-bold text-slate-800">I'm a Customer</span>
-                    <span className="text-xs text-slate-500">Scan &amp; pay</span>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">I'm a Customer</p>
+                      <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                        I want to scan and pay vendors at the palengke
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-400">e.g. Tatay Boy</p>
                   </button>
                 </div>
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  Not sure yet → Go to Dashboard
-                </button>
               </div>
             )}
 
           </div>
+        </div>
+
+        {/* Mobile footer */}
+        <div className="lg:hidden px-6 pb-6 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <ShieldCheck size={12} className="text-green-500" />
+          Secured by Stellar Testnet
         </div>
       </div>
     </div>
