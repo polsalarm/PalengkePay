@@ -18,7 +18,7 @@
 
 ## 🎥 Demo Video
 
-> _Full MVP walkthrough — coming soon. Will cover: landing → onboarding → vendor QR → customer payment → utang flow → admin dashboard._
+**[Watch full MVP walkthrough on YouTube →](https://youtu.be/hOiuXBG5A3Q?si=lLhgmeAsGQVen8e1)**
 
 ## 📊 User Feedback
 
@@ -30,35 +30,53 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 
 ## Screenshots
 
-### Desktop
+### Landing
 
-**Landing**
+<img src="UI/WEB/land1.png" alt="Landing — hero" width="100%" />
 
-<img src="docs/screenshots/landing-desktop.png" alt="Landing page" width="100%" />
+<img src="UI/WEB/land2.png" alt="Landing — features" width="100%" />
 
-<img src="docs/screenshots/landing-features.png" alt="Features section" width="100%" />
+<img src="UI/WEB/land3.png" alt="Landing — how it works" width="100%" />
 
-**Connect Wallet**
+<img src="UI/WEB/land4.png" alt="Landing — footer" width="100%" />
 
-<img src="docs/screenshots/desktop-connect.png" alt="Connect wallet" width="100%" />
+---
 
-**Onboarding Flow (4 steps)**
+### Connect Wallet
 
-| Step 1 — Get a Wallet | Step 2 — Connect | Step 3 — Fund | Step 4 — Choose Role |
+<img src="UI/WEB/connect1.png" alt="Connect wallet" width="100%" />
+
+---
+
+### Onboarding Flow
+
+| Get a Wallet | Connect | Fund | You're Ready |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/desktop-onboard-1-wallet.png" alt="Get wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-2-connect.png" alt="Connect wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-3-fund.png" alt="Fund wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-4-ready.png" alt="You're ready" width="220" /> |
+| <img src="UI/WEB/onboard.png" alt="Step 1 — Get wallet" width="220" /> | <img src="UI/WEB/onboard1.png" alt="Step 2 — Connect" width="220" /> | <img src="UI/WEB/onboard2.png" alt="Step 3 — Fund" width="220" /> | <img src="UI/WEB/onbaord3.png" alt="Step 4 — Ready" width="220" /> |
 
-**Vendor Dashboard**
+---
 
-> _Screenshot coming soon_
+### Vendor
 
-**Customer Dashboard**
+| Home | QR Code | Transactions | Utang | Profile | Apply |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| <img src="UI/WEB/vendor/home.png" alt="Vendor Home" width="160" /> | <img src="UI/WEB/vendor/qr.png" alt="Vendor QR" width="160" /> | <img src="UI/WEB/vendor/transactions.png" alt="Transactions" width="160" /> | <img src="UI/WEB/vendor/utang.png" alt="Vendor Utang" width="160" /> | <img src="UI/WEB/vendor/profile.png" alt="Profile" width="160" /> | <img src="UI/WEB/vendor/apply.png" alt="Apply" width="160" /> |
 
-> _Screenshot coming soon_
+---
 
-**Admin Dashboard**
+### Customer
 
-> _Screenshot coming soon_
+| Home | Scan & Pay | History | My Utang | Market Directory |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="UI/WEB/costumer/home.png" alt="Customer Home" width="180" /> | <img src="UI/WEB/costumer/scan.png" alt="Scan & Pay" width="180" /> | <img src="UI/WEB/costumer/history.png" alt="History" width="180" /> | <img src="UI/WEB/costumer/utang.png" alt="My Utang" width="180" /> | <img src="UI/WEB/costumer/market.png" alt="Market Directory" width="180" /> |
+
+---
+
+### Admin
+
+| Market Dashboard | Pending Approvals | Active Vendors | Manual Register |
+|:---:|:---:|:---:|:---:|
+| <img src="UI/WEB/admin/market_dashboard.png" alt="Market Dashboard" width="220" /> | <img src="UI/WEB/admin/approve.png" alt="Approve Vendors" width="220" /> | <img src="UI/WEB/admin/current_vendors.png" alt="Current Vendors" width="220" /> | <img src="UI/WEB/admin/manual_register.png" alt="Manual Register" width="220" /> |
 
 ---
 
