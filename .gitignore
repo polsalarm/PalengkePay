@@ -54,6 +54,10 @@ firestore-debug.log
 *.log
 coverage/
 
+# UI design scratch folder + root-level doc (moved to docs/)
+UI/
+/UI_UX_IMPROVEMENTS.md
+
 # Claude Code local config — personal, not project files
 .claude/
 .agents/
