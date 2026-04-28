@@ -1,13 +1,14 @@
 # PalengkePay — Smart Contracts
 
-Two Soroban contracts on Stellar Testnet.
+Three Soroban contracts on Stellar Testnet.
 
 ## Contracts
 
-| Contract | Description |
-|----------|-------------|
-| `palengke-payment` | Core XLM payment settlement |
-| `vendor-registry` | On-chain vendor identity + stats |
+| Contract | Contract ID | Description |
+|----------|-------------|-------------|
+| `vendor-registry` | `CA5QQ2SE4XTBX3K4XNHLNAL36GIJOJ3KXYDS2VLAYZC4Q5FAYMDWZUJH` | On-chain vendor identity — register, apply, approve, deactivate, stats |
+| `palengke-payment` | `CCVHL724CBAKIBEM2BMWUV35FXXV2TESWC3ZK3UQVLUEGCQ7LNN6ZUNF` | QR-based XLM payment settlement with fee support |
+| `utang-escrow` | `CD2VU3FLA473TCD67TBYXTQROWLJUUWVNPK56CMWBS6GW3N3ZO4JM5BG` | BNPL installment agreements — create, pay, complete, default |
 
 ## Prerequisites
 
@@ -16,43 +17,55 @@ Two Soroban contracts on Stellar Testnet.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Add wasm32 target
-rustup target add wasm32-unknown-unknown
+rustup target add wasm32v1-none
 
-# Install Stellar CLI
+# Install Stellar CLI 25.2+
 cargo install --locked stellar-cli --features opt
 ```
 
 ## Build
 
 ```bash
-cd contracts/palengke-payment
-cargo build --release --target wasm32-unknown-unknown
+cd contracts
+stellar contract build
+```
 
-cd contracts/vendor-registry
-cargo build --release --target wasm32-unknown-unknown
+Or per-contract:
+
+```bash
+cd contracts/vendor-registry   && cargo build --release --target wasm32v1-none
+cd contracts/palengke-payment  && cargo build --release --target wasm32v1-none
+cd contracts/utang-escrow      && cargo build --release --target wasm32v1-none
 ```
 
 ## Test
 
 ```bash
-cd contracts/palengke-payment && cargo test
-cd contracts/vendor-registry && cargo test
+cd contracts
+cargo test --workspace
+```
+
+Or per-contract:
+
+```bash
+cd contracts/vendor-registry   && cargo test
+cd contracts/palengke-payment  && cargo test
+cd contracts/utang-escrow      && cargo test
 ```
 
 ## Deploy to Testnet
 
 ```bash
-# Fund a testnet account (do this once)
+# Fund a testnet account (once)
 stellar keys generate admin --network testnet
 stellar keys fund admin --network testnet
 
-# Deploy VendorRegistry first
+# 1 — Deploy & initialize VendorRegistry
 stellar contract deploy \
-  --wasm contracts/vendor-registry/target/wasm32-unknown-unknown/release/vendor_registry.wasm \
+  --wasm contracts/vendor-registry/target/wasm32v1-none/release/vendor_registry.wasm \
   --source admin \
   --network testnet
 
-# Initialize VendorRegistry (replace CONTRACT_ID with output above)
 stellar contract invoke \
   --id <VENDOR_REGISTRY_CONTRACT_ID> \
   --source admin \
@@ -60,21 +73,34 @@ stellar contract invoke \
   -- initialize \
   --admin $(stellar keys address admin)
 
-# Deploy PalengkePayment
+# 2 — Deploy & initialize PalengkePayment
 stellar contract deploy \
-  --wasm contracts/palengke-payment/target/wasm32-unknown-unknown/release/palengke_payment.wasm \
+  --wasm contracts/palengke-payment/target/wasm32v1-none/release/palengke_payment.wasm \
   --source admin \
   --network testnet
 
-# Initialize PalengkePayment
 stellar contract invoke \
   --id <PALENGKE_PAYMENT_CONTRACT_ID> \
   --source admin \
   --network testnet \
   -- initialize \
   --admin $(stellar keys address admin) \
-  --fee_bps 30 \
-  --vendor_registry <VENDOR_REGISTRY_CONTRACT_ID>
+  --fee_bps 0 \
+  --token $(stellar contract id asset --asset native --network testnet)
+
+# 3 — Deploy & initialize UTangEscrow
+stellar contract deploy \
+  --wasm contracts/utang-escrow/target/wasm32v1-none/release/utang_escrow.wasm \
+  --source admin \
+  --network testnet
+
+stellar contract invoke \
+  --id <UTANG_ESCROW_CONTRACT_ID> \
+  --source admin \
+  --network testnet \
+  -- initialize \
+  --admin $(stellar keys address admin) \
+  --token $(stellar contract id asset --asset native --network testnet)
 ```
 
 ## After Deploy
@@ -82,9 +108,12 @@ stellar contract invoke \
 Add contract IDs to `frontend/.env.local`:
 
 ```env
+VITE_STELLAR_NETWORK=testnet
+VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 VITE_VENDOR_REGISTRY_CONTRACT_ID=<VENDOR_REGISTRY_CONTRACT_ID>
 VITE_PALENGKE_PAYMENT_CONTRACT_ID=<PALENGKE_PAYMENT_CONTRACT_ID>
-VITE_ADMIN_WALLET=<admin G... address>
+VITE_UTANG_ESCROW_CONTRACT_ID=<UTANG_ESCROW_CONTRACT_ID>
+VITE_UTANG_FEE_XLM=1
 ```
 
 ## Generate TypeScript Bindings (optional)
@@ -92,11 +121,16 @@ VITE_ADMIN_WALLET=<admin G... address>
 ```bash
 stellar contract bindings typescript \
   --network testnet \
+  --id <VENDOR_REGISTRY_CONTRACT_ID> \
+  --output-dir frontend/src/lib/bindings/vendor-registry
+
+stellar contract bindings typescript \
+  --network testnet \
   --id <PALENGKE_PAYMENT_CONTRACT_ID> \
   --output-dir frontend/src/lib/bindings/palengke-payment
 
 stellar contract bindings typescript \
   --network testnet \
-  --id <VENDOR_REGISTRY_CONTRACT_ID> \
-  --output-dir frontend/src/lib/bindings/vendor-registry
+  --id <UTANG_ESCROW_CONTRACT_ID> \
+  --output-dir frontend/src/lib/bindings/utang-escrow
 ```
