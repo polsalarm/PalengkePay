@@ -20,10 +20,6 @@
 
 > _Full MVP walkthrough — coming soon. Will cover: landing → onboarding → vendor QR → customer payment → utang flow → admin dashboard._
 
-## 📋 Level Checklist
-
-See [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for full MVP completion checklist.
-
 ## 📊 User Feedback
 
 Beta users were onboarded via a Google Form collecting name, email, wallet address, and product rating.
@@ -51,6 +47,18 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 | Step 1 — Get a Wallet | Step 2 — Connect | Step 3 — Fund | Step 4 — Choose Role |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screenshots/desktop-onboard-1-wallet.png" alt="Get wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-2-connect.png" alt="Connect wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-3-fund.png" alt="Fund wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-4-ready.png" alt="You're ready" width="220" /> |
+
+**Vendor Dashboard**
+
+> _Screenshot coming soon_
+
+**Customer Dashboard**
+
+> _Screenshot coming soon_
+
+**Admin Dashboard**
+
+> _Screenshot coming soon_
 
 ---
 

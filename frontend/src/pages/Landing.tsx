@@ -548,6 +548,11 @@ export function Landing() {
             <span className="flex items-center gap-1.5"><Star size={12} style={{ color: '#93C5FD' }} />Made in Philippines 🇵🇭</span>
           </div>
         </div>
+        <div className="max-w-7xl mx-auto px-6 lg:px-14 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+          <p className="text-xs text-center" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            Created by <span style={{ color: 'rgba(255,255,255,0.45)' }}>Paul Dacalan</span>
+          </p>
+        </div>
       </footer>
     </div>
   );
