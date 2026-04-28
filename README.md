@@ -14,19 +14,31 @@
 
 ## Screenshots
 
-### Landing Page (Desktop)
+### Desktop
 
-<img src="docs/screenshots/landing-desktop.png" alt="PalengkePay Landing" width="100%" />
+**Landing**
 
-### Features Section
+<img src="docs/screenshots/landing-desktop.png" alt="Landing page" width="100%" />
 
-<img src="docs/screenshots/landing-features.png" alt="Features" width="100%" />
+<img src="docs/screenshots/landing-features.png" alt="Features section" width="100%" />
 
-### Mobile App
+**Connect Wallet**
 
-| Customer Home | My Utang | Onboarding — Fund |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/mobile-customer-home.png" alt="Customer Home" width="200" /> | <img src="docs/screenshots/mobile-customer-utang.png" alt="Customer Utang" width="200" /> | <img src="docs/screenshots/onboard-fund.png" alt="Onboard Fund" width="200" /> |
+<img src="docs/screenshots/desktop-connect.png" alt="Connect wallet" width="100%" />
+
+**Onboarding Flow (4 steps)**
+
+| Step 1 — Get a Wallet | Step 2 — Connect | Step 3 — Fund | Step 4 — Choose Role |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/desktop-onboard-1-wallet.png" alt="Get wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-2-connect.png" alt="Connect wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-3-fund.png" alt="Fund wallet" width="220" /> | <img src="docs/screenshots/desktop-onboard-4-ready.png" alt="You're ready" width="220" /> |
+
+---
+
+### Mobile
+
+| Customer Home | My Utang |
+|:---:|:---:|
+| <img src="docs/screenshots/mobile-customer-home.png" alt="Customer Home" width="220" /> | <img src="docs/screenshots/mobile-customer-utang.png" alt="My Utang" width="220" /> |
 
 ---
 
