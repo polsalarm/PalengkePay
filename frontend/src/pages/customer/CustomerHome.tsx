@@ -28,23 +28,26 @@ function groupByDate(txs: TxRecord[]) {
 function RecentTxRow({ tx }: { tx: TxRecord }) {
   const vendorName = useVendorName(tx.to);
   return (
-    <div className="flex items-center justify-between py-3 first:pt-0 last:pb-0 group">
+    <div className="flex items-center justify-between py-2.5 px-2 rounded-xl transition-colors hover:bg-slate-50">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
-          <TrendingDown size={14} className="text-rose-400" />
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: '#FFF1F2' }}
+        >
+          <TrendingDown size={14} style={{ color: '#F43F5E' }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-700 truncate">
             {vendorName || truncateAddress(tx.to)}
           </p>
           {tx.memo && (
-            <p className="text-xs text-teal-600 font-medium truncate">{tx.memo}</p>
+            <p className="text-xs font-medium truncate mt-0.5" style={{ color: '#0F766E' }}>{tx.memo}</p>
           )}
           <p className="text-xs text-slate-400">{relativeTime(tx.createdAt)}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-3">
-        <span className="text-sm font-bold text-rose-500">-{tx.amountXlm.toFixed(2)}</span>
+        <span className="text-sm font-black" style={{ color: '#F43F5E' }}>-{tx.amountXlm.toFixed(2)}</span>
         <span className="text-xs text-slate-400">XLM</span>
         <a
           href={stellarExpertUrl(tx.id)}
@@ -74,98 +77,197 @@ export function CustomerHome() {
   const overdueCount = activeUtangs.filter((u) => isOverdue(u.nextDueSecs)).length;
   const recent = transactions.slice(0, 10);
   const groups = groupByDate(recent);
-
   const totalSpent = transactions.reduce((s, t) => s + t.amountXlm, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-page-in">
 
-      {/* Balance hero */}
-      <div className="relative bg-gradient-to-br from-teal-600 via-teal-700 to-teal-900 rounded-2xl p-6 text-white shadow-lg overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-teal-500 opacity-20 rounded-full -translate-y-10 translate-x-10 blur-2xl pointer-events-none" />
-        <p className="text-xs font-bold uppercase tracking-widest opacity-60 mb-1">Wallet Balance</p>
-        <p className="text-4xl font-black tracking-tight truncate">
-          {balance ? parseFloat(balance).toFixed(2) : '—'}
-          <span className="text-lg font-semibold opacity-50 ml-2">XLM</span>
-        </p>
-        <p className="text-xs opacity-40 mt-2 font-mono truncate">{address ?? 'Not connected'}</p>
+      {/* ── BALANCE HERO ── */}
+      <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: '#0A3D38' }}>
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: -50, right: -50, width: 240, height: 240, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(20,184,166,0.3) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div
+          className="absolute select-none pointer-events-none font-black"
+          style={{
+            fontSize: '13rem', lineHeight: 1,
+            color: 'rgba(255,255,255,0.03)',
+            bottom: -20, right: -8,
+            fontFamily: "'Syne', sans-serif",
+          }}
+        >₱</div>
 
-        {/* Stats row */}
-        <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-xs opacity-50 mb-0.5">Total spent</p>
-            <p className="text-sm font-bold">{totalSpent.toFixed(2)} XLM</p>
-          </div>
-          <div>
-            <p className="text-xs opacity-50 mb-0.5">Transactions</p>
-            <p className="text-sm font-bold">{transactions.length}</p>
+        <div className="relative p-6">
+          <p
+            className="text-xs font-bold uppercase tracking-widest mb-2"
+            style={{ color: 'rgba(255,255,255,0.35)' }}
+          >Wallet Balance</p>
+          <p
+            className="font-black text-white leading-none mb-2"
+            style={{ fontSize: 'clamp(2.6rem, 9vw, 4.2rem)', fontFamily: "'Syne', sans-serif" }}
+          >
+            {balance ? parseFloat(balance).toFixed(2) : '—'}
+            <span className="text-xl font-semibold ml-2" style={{ color: 'rgba(255,255,255,0.35)' }}>XLM</span>
+          </p>
+          <p
+            className="text-xs font-mono mb-5 truncate"
+            style={{ color: 'rgba(255,255,255,0.22)' }}
+          >{address ?? 'Not connected'}</p>
+
+          <div
+            className="pt-4 grid grid-cols-2 gap-4"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <div>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Total spent</p>
+              <p className="text-sm font-black text-white">{totalSpent.toFixed(2)} XLM</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Transactions</p>
+              <p className="text-sm font-black text-white">{transactions.length}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Utang summary */}
+      {/* ── UTANG ALERT ── */}
       {activeUtangs.length > 0 && (
         <button onClick={() => navigate('/customer/utang')} className="w-full text-left">
-          <div className={`rounded-2xl p-4 border-2 transition-all ${
-            overdueCount > 0
-              ? 'bg-rose-50 border-rose-300 shadow-rose-100 shadow-md'
-              : 'bg-amber-50 border-amber-200 hover:border-amber-300'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${overdueCount > 0 ? 'bg-rose-100' : 'bg-amber-100'}`}>
-                  <HandCoins size={16} className={overdueCount > 0 ? 'text-rose-500' : 'text-amber-500'} />
+          <div
+            className="rounded-2xl p-4 transition-all"
+            style={overdueCount > 0
+              ? { backgroundColor: '#FFF1F2', border: '2px solid #FECDD3' }
+              : { backgroundColor: '#FFFBEB', border: '2px solid #FDE68A' }
+            }
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={overdueCount > 0 ? { backgroundColor: '#FFE4E6' } : { backgroundColor: '#FEF3C7' }}
+                >
+                  {overdueCount > 0
+                    ? <AlertTriangle size={17} style={{ color: '#F43F5E' }} className="animate-pulse" />
+                    : <HandCoins size={17} style={{ color: '#D97706' }} />
+                  }
                 </div>
-                <span className="text-sm font-bold text-slate-800">Utang Balance</span>
-                {overdueCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">
-                    <AlertTriangle size={10} />
-                    {overdueCount} overdue
-                  </span>
-                )}
+                <div>
+                  <p className="text-sm font-black text-slate-800">Utang Balance</p>
+                  {overdueCount > 0 && (
+                    <span className="text-xs font-bold" style={{ color: '#F43F5E' }}>
+                      {overdueCount} overdue
+                    </span>
+                  )}
+                </div>
               </div>
-              <ArrowRight size={14} className="text-slate-400" />
+              <ArrowRight size={15} className="text-slate-400" />
             </div>
-            <p className="text-2xl font-black text-slate-900">
+            <p
+              className="font-black text-slate-900 leading-none"
+              style={{ fontSize: '2rem', fontFamily: "'Syne', sans-serif" }}
+            >
               {totalOwed.toFixed(2)}
-              <span className="text-sm font-semibold text-slate-500 ml-1">XLM</span>
+              <span className="text-sm font-semibold text-slate-500 ml-1.5">XLM</span>
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               {activeUtangs.length} active agreement{activeUtangs.length !== 1 ? 's' : ''}
             </p>
           </div>
         </button>
       )}
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* ── QUICK ACTIONS ── */}
+      <div className="space-y-3">
+        {/* Primary: Scan to Pay */}
         <button
           onClick={() => navigate('/customer/scan')}
-          className="flex flex-col items-center justify-center gap-3 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-bold py-6 rounded-2xl transition-all shadow-md"
+          className="w-full relative overflow-hidden flex items-center gap-4 text-white py-5 px-6 rounded-2xl transition-all active:scale-95 shadow-lg hover:opacity-95"
+          style={{ backgroundColor: '#0F766E' }}
         >
-          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
+          <div
+            className="absolute inset-0 pointer-events-none opacity-10"
+            style={{
+              backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+          <div
+            className="absolute right-0 top-0 bottom-0 w-32 pointer-events-none"
+            style={{ background: 'linear-gradient(to left, rgba(20,184,166,0.35), transparent)' }}
+          />
+          <div
+            className="relative w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+          >
             <ScanLine size={24} />
           </div>
-          <span className="text-sm">Scan to Pay</span>
-        </button>
-        <button
-          onClick={() => navigate('/market')}
-          className="flex flex-col items-center justify-center gap-3 bg-white hover:bg-slate-50 active:scale-95 border border-slate-200 hover:border-teal-200 text-slate-700 font-bold py-6 rounded-2xl transition-all shadow-sm"
-        >
-          <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center">
-            <Store size={24} className="text-teal-600" />
+          <div className="relative text-left">
+            <p className="font-black text-lg leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>Scan to Pay</p>
+            <p className="text-xs opacity-55 mt-0.5">Aim at any PalengkePay QR</p>
           </div>
-          <span className="text-sm">Find Vendors</span>
         </button>
-      </div>
 
-      {/* Recent payments */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-bold text-slate-800">Recent Payments</h2>
+        {/* Secondary actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/market')}
+            className="flex flex-col items-center justify-center gap-2.5 bg-white border border-slate-200 active:scale-95 py-5 rounded-2xl transition-all"
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#0F766E';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#F0FDFA';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#E2E8F0';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'white';
+            }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F0FDFA' }}>
+              <Store size={20} style={{ color: '#0F766E' }} />
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>Find Vendors</p>
+              <p className="text-xs text-slate-400 mt-0.5">Browse palengke</p>
+            </div>
+          </button>
+
           <button
             onClick={() => navigate('/customer/history')}
-            className="flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+            className="flex flex-col items-center justify-center gap-2.5 bg-white border border-slate-200 active:scale-95 py-5 rounded-2xl transition-all"
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#F59E0B';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FFFBEB';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#E2E8F0';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'white';
+            }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+              <ShoppingBag size={20} style={{ color: '#D97706' }} />
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>History</p>
+              <p className="text-xs text-slate-400 mt-0.5">Past payments</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* ── RECENT PAYMENTS ── */}
+      <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>
+            Recent Payments
+          </h2>
+          <button
+            onClick={() => navigate('/customer/history')}
+            className="flex items-center gap-1 text-xs font-bold hover:underline transition-colors"
+            style={{ color: '#0F766E' }}
           >
             View all <ArrowRight size={12} />
           </button>
@@ -174,29 +276,33 @@ export function CustomerHome() {
         <div className="px-5 py-4">
           {isLoading && (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3].map(i => (
                 <div key={i} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 animate-pulse shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3.5 w-28 bg-slate-200 animate-pulse rounded" />
-                    <div className="h-3 w-20 bg-slate-100 animate-pulse rounded" />
+                  <div className="w-9 h-9 rounded-full skeleton shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-28 skeleton rounded" />
+                    <div className="h-2.5 w-20 skeleton rounded" />
                   </div>
-                  <div className="h-4 w-14 bg-slate-200 animate-pulse rounded" />
+                  <div className="h-4 w-16 skeleton rounded" />
                 </div>
               ))}
             </div>
           )}
 
           {!isLoading && recent.length === 0 && (
-            <div className="text-center py-8">
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3 border border-slate-100">
-                <ShoppingBag size={24} className="text-slate-300" />
+            <div className="text-center py-10">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}
+              >
+                <ShoppingBag size={22} className="text-slate-300" />
               </div>
-              <p className="text-sm font-semibold text-slate-400 mb-1">No payments yet</p>
-              <p className="text-xs text-slate-300 mb-4">Scan a vendor QR to make your first payment</p>
+              <p className="text-sm font-bold text-slate-500 mb-1">Wala pang payments</p>
+              <p className="text-xs text-slate-400 mb-4">I-scan ang QR ng vendor para magbayad</p>
               <button
                 onClick={() => navigate('/customer/scan')}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 px-4 py-2 rounded-full transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full transition-colors"
+                style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
               >
                 <ScanLine size={12} /> Scan now
               </button>
@@ -204,12 +310,18 @@ export function CustomerHome() {
           )}
 
           {!isLoading && groups.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {groups.map(({ label, txs }) => (
                 <div key={label}>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-                  <div className="divide-y divide-slate-50">
-                    {txs.map((tx) => (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="flex-1 h-px bg-slate-100" />
+                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
+                      {label}
+                    </span>
+                    <span className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <div className="space-y-0.5">
+                    {txs.map(tx => (
                       <RecentTxRow key={tx.id} tx={tx} />
                     ))}
                   </div>

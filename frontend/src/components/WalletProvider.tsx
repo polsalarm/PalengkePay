@@ -9,6 +9,7 @@ import { fetchBalance } from '../lib/stellar';
 export interface WalletContextValue {
   address: string | null;
   balance: string | null;
+  walletName: string | null;
   isConnected: boolean;
   isConnecting: boolean;
   connect: () => Promise<void>;
@@ -55,6 +56,7 @@ function initKit(): Promise<void> {
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
+  const [walletName, setWalletName] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +71,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem('palengkepay_address');
+    const storedWallet = localStorage.getItem('palengkepay_wallet_name');
     if (stored) {
       setAddress(stored);
+      if (storedWallet) setWalletName(storedWallet);
       refreshBalance(stored);
     }
     initKit(); // pre-warm in background
@@ -81,9 +85,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       await initKit();
-      const { address: addr } = await StellarWalletsKit.authModal();
+      const result = await StellarWalletsKit.authModal() as { address: string; name?: string };
+      const addr = result.address;
+      const name = result.name ?? null;
       setAddress(addr);
+      setWalletName(name);
       localStorage.setItem('palengkepay_address', addr);
+      if (name) localStorage.setItem('palengkepay_wallet_name', name);
       await refreshBalance(addr);
     } catch (err: unknown) {
       const msg = (err as { message?: string }).message ?? 'Connection failed';
@@ -103,7 +111,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     setAddress(null);
     setBalance(null);
+    setWalletName(null);
     localStorage.removeItem('palengkepay_address');
+    localStorage.removeItem('palengkepay_wallet_name');
   }, []);
 
   const signTransaction = useCallback(async (xdr: string): Promise<string> => {
@@ -120,6 +130,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     <WalletContext.Provider value={{
       address,
       balance,
+      walletName,
       isConnected: !!address,
       isConnecting,
       connect,

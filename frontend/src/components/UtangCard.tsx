@@ -16,14 +16,7 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
     ? utang.installmentsPaid / utang.installmentsTotal
     : 0;
 
-  // Resolve vendor name for customer view (customers aren't vendors so no lookup needed vendor-side)
   const resolvedVendorName = useVendorName(perspective === 'customer' ? utang.vendorWallet : null);
-
-  const statusColors = {
-    active: 'bg-blue-50 text-blue-700 border-blue-100',
-    completed: 'bg-green-50 text-green-700 border-green-100',
-    defaulted: 'bg-red-50 text-red-700 border-red-100',
-  };
 
   const overdue = utang.status === 'active' && isOverdue(utang.nextDueSecs);
 
@@ -33,11 +26,28 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
     : truncateAddress(utang.customerWallet);
   const isMono = perspective === 'vendor' || !resolvedVendorName;
 
+  const statusColors = {
+    active: 'bg-blue-50 text-blue-700 border-blue-100',
+    completed: 'bg-green-50 text-green-700 border-green-100',
+    defaulted: 'bg-red-50 text-red-700 border-red-100',
+  };
+
+  const borderClass = utang.status === 'defaulted'
+    ? 'border-red-200'
+    : overdue
+    ? 'border-amber-300 animate-border-pulse'
+    : 'border-slate-200';
+
   return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${
-      utang.status === 'defaulted' ? 'border-red-200' :
-      overdue ? 'border-amber-200' : 'border-slate-200'
-    }`}>
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${borderClass}`}>
+      {/* Overdue warning banner */}
+      {overdue && (
+        <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 flex items-center gap-1.5">
+          <AlertTriangle size={12} className="text-amber-500 shrink-0" />
+          <p className="text-xs font-semibold text-amber-700">Installment overdue — please pay soon</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -67,8 +77,8 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
             {utang.totalAmountXlm.toFixed(2)}
             <span className="text-base font-medium text-slate-400 ml-1">XLM</span>
           </span>
-          <span className="text-sm text-slate-500">
-            {utang.installmentsPaid}/{utang.installmentsTotal} paid
+          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+            {utang.installmentsPaid} of {utang.installmentsTotal} paid
           </span>
         </div>
         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -81,22 +91,25 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
             style={{ width: `${Math.round(progress * 100)}%` }}
           />
         </div>
-        <p className="text-xs text-slate-400 mt-1">
-          {utang.installmentAmountXlm.toFixed(2)} XLM × {utang.installmentsTotal} installments
-          · every {utang.intervalDays}d
+        <p className="text-xs text-slate-400 mt-1.5">
+          {utang.installmentAmountXlm.toFixed(2)} XLM × {utang.installmentsTotal} installments · every {utang.intervalDays}d
         </p>
+
+        {/* Prominent due date */}
+        {utang.status === 'active' && (
+          <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+            overdue
+              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+              : 'bg-slate-50 text-slate-600 border border-slate-200'
+          }`}>
+            {overdue ? <AlertTriangle size={11} /> : <Clock size={11} />}
+            {dueLabel(utang.nextDueSecs)}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
       <div className="px-5 pb-4 flex items-center justify-between gap-3">
-        {utang.status === 'active' && (
-          <div className={`flex items-center gap-1.5 text-xs font-medium ${
-            overdue ? 'text-amber-600' : 'text-slate-500'
-          }`}>
-            {overdue ? <AlertTriangle size={13} /> : <Clock size={13} />}
-            {dueLabel(utang.nextDueSecs)}
-          </div>
-        )}
         {utang.status === 'completed' && (
           <div className="flex items-center gap-1.5 text-xs font-medium text-green-600">
             <CheckCircle size={13} />
@@ -109,6 +122,7 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
             Defaulted
           </div>
         )}
+        {utang.status === 'active' && <div />}
 
         <div className="flex items-center gap-2 ml-auto">
           {txHash && (
@@ -124,7 +138,7 @@ export function UtangCard({ utang, perspective, onPayInstallment, txHash }: Utan
           {perspective === 'customer' && utang.status === 'active' && onPayInstallment && (
             <button
               onClick={() => onPayInstallment(utang)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors active:scale-95 ${
                 overdue
                   ? 'bg-amber-500 hover:bg-amber-600 text-white'
                   : 'bg-teal-700 hover:bg-teal-800 text-white'

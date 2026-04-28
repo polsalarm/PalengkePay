@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Store } from 'lucide-react';
 import type { VendorProfile } from '../lib/hooks/useVendor';
+
+const MEMO_MAX = 28;
+// Approximate XLM/PHP rate — cosmetic display only
+const XLM_TO_PHP = 8.5;
 
 interface Props {
   vendorAddress: string;
@@ -16,6 +20,14 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [error, setError] = useState('');
+  const [phpRate, setPhpRate] = useState<number>(XLM_TO_PHP);
+
+  useEffect(() => {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=php')
+      .then((r) => r.json())
+      .then((d) => { if (d?.stellar?.php) setPhpRate(d.stellar.php); })
+      .catch(() => { /* keep fallback */ });
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +39,15 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
     onSubmit(amount, memo);
   };
 
-  // Use chain data if loaded, fall back to QR-embedded data, then raw address
   const displayName = vendor?.name ?? preloadedVendorName ?? null;
   const displayStall = vendor
     ? `Stall ${vendor.stallNumber} · ${vendor.productType}`
     : preloadedStallInfo ?? null;
+
+  const xlmAmt = parseFloat(amount);
+  const phpEst = !isNaN(xlmAmt) && xlmAmt > 0 ? (xlmAmt * phpRate).toFixed(2) : null;
+  const memoLeft = MEMO_MAX - memo.length;
+  const memoNearLimit = memoLeft <= 8;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -44,8 +60,8 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
           <div className="min-w-0">
             {isLoading && !preloadedVendorName ? (
               <>
-                <div className="h-4 w-32 bg-teal-200 animate-pulse rounded mb-1" />
-                <div className="h-3 w-24 bg-teal-100 animate-pulse rounded" />
+                <div className="h-4 w-32 skeleton rounded mb-1" />
+                <div className="h-3 w-24 skeleton rounded" />
               </>
             ) : displayName ? (
               <>
@@ -78,19 +94,30 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
           className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xl font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-slate-200"
           autoFocus
         />
+        {phpEst && (
+          <p className="text-xs text-slate-400 mt-1.5 text-right">
+            ≈ <span className="text-slate-600 font-semibold">₱{phpEst}</span>
+            <span className="text-slate-300 ml-1">(approx)</span>
+          </p>
+        )}
       </div>
 
       {/* Memo */}
       <div>
-        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-          What did you buy? <span className="font-normal text-slate-400">(optional)</span>
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs font-semibold text-slate-600">
+            What did you buy? <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <span className={`text-xs font-medium tabular-nums ${memoNearLimit ? 'text-amber-500' : 'text-slate-300'}`}>
+            {memo.length}/{MEMO_MAX}
+          </span>
+        </div>
         <input
           type="text"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
           placeholder="e.g. 2kg tilapia"
-          maxLength={28}
+          maxLength={MEMO_MAX}
           className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-slate-300"
         />
       </div>

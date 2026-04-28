@@ -49,13 +49,16 @@ async function fetchPaymentsForAccount(address: string): Promise<TxRecord[]> {
 export function useVendorTransactions(vendorWallet: string | null) {
   const [transactions, setTransactions] = useState<TxRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (wallet: string) => {
     setIsLoading(true);
+    setError(null);
     try {
       const all = await fetchPaymentsForAccount(wallet);
       setTransactions(all.filter((t) => t.to === wallet));
-    } catch {
+    } catch (e: unknown) {
+      setError((e as { message?: string }).message ?? 'Failed to load transactions');
       setTransactions([]);
     } finally {
       setIsLoading(false);
@@ -83,19 +86,24 @@ export function useVendorTransactions(vendorWallet: string | null) {
     return transactions.filter((t) => new Date(t.createdAt) >= today).length;
   }, [transactions]);
 
-  return { transactions, isLoading, todayEarnings, todayCount };
+  const retry = useCallback(() => { if (vendorWallet) load(vendorWallet); }, [vendorWallet, load]);
+
+  return { transactions, isLoading, error, retry, todayEarnings, todayCount };
 }
 
 export function useCustomerTransactions(customerWallet: string | null) {
   const [transactions, setTransactions] = useState<TxRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (wallet: string) => {
     setIsLoading(true);
+    setError(null);
     try {
       const all = await fetchPaymentsForAccount(wallet);
       setTransactions(all.filter((t) => t.from === wallet));
-    } catch {
+    } catch (e: unknown) {
+      setError((e as { message?: string }).message ?? 'Failed to load transactions');
       setTransactions([]);
     } finally {
       setIsLoading(false);
@@ -109,7 +117,9 @@ export function useCustomerTransactions(customerWallet: string | null) {
     return () => clearInterval(interval);
   }, [customerWallet, load]);
 
-  return { transactions, isLoading };
+  const retry = useCallback(() => { if (customerWallet) load(customerWallet); }, [customerWallet, load]);
+
+  return { transactions, isLoading, error, retry };
 }
 
 export function relativeTime(isoDate: string): string {

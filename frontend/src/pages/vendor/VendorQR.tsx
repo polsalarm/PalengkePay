@@ -1,4 +1,4 @@
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useVendor } from '../../lib/hooks/useVendor';
@@ -44,6 +44,7 @@ export function VendorQR() {
             size={280}
             vendorName={vendor?.name ?? 'Your QR Code'}
             stallInfo={stallInfo}
+            downloadable
           />
         )}
       </div>
@@ -53,10 +54,6 @@ export function VendorQR() {
         <p className="text-xs text-slate-400">
           Show this screen to customers so they can scan and pay you.
         </p>
-        <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-slate-300">
-          <Download size={11} />
-          <span>Screenshot to save</span>
-        </div>
       </div>
     </div>
   );

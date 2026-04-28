@@ -30,10 +30,10 @@ export default function App() {
           {/* Fullscreen pages — no layout shell */}
           <Route path="/onboard" element={<Onboard />} />
           <Route path="/connect" element={<Connect />} />
+          <Route path="/" element={<Landing />} />
 
           {/* Layout shell */}
           <Route element={<Layout />}>
-            <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/test-send" element={<TestSend />} />
 

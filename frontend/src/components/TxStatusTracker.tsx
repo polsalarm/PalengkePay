@@ -8,18 +8,26 @@ interface Props {
   error: string | null;
   amount?: string;
   recipientName?: string;
+  fee?: string;
   onRetry?: () => void;
 }
 
-export function TxStatusTracker({ status, txHash, error, amount, recipientName, onRetry }: Props) {
+const BASE_FEE = '0.00001';
+
+export function TxStatusTracker({ status, txHash, error, amount, recipientName, fee, onRetry }: Props) {
   if (status === 'idle') return null;
+
+  const displayFee = fee ?? BASE_FEE;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
       {status === 'building' && (
         <div className="flex items-center gap-3 text-slate-500">
           <Loader2 size={20} className="animate-spin text-teal-700 shrink-0" />
-          <span className="text-sm font-medium">Preparing transaction…</span>
+          <div>
+            <p className="text-sm font-medium text-slate-700">Preparing transaction…</p>
+            <p className="text-xs text-slate-400 mt-0.5">Network fee: {displayFee} XLM</p>
+          </div>
         </div>
       )}
 
@@ -28,7 +36,7 @@ export function TxStatusTracker({ status, txHash, error, amount, recipientName, 
           <Lock size={20} className="text-teal-700 shrink-0 animate-pulse" />
           <div>
             <p className="text-sm font-medium text-slate-800">Confirm in your wallet</p>
-            <p className="text-xs text-slate-400">On mobile: open LOBSTR app and approve. On desktop: check your browser extension.</p>
+            <p className="text-xs text-slate-400 mt-0.5">On mobile: open LOBSTR app and approve. On desktop: check your browser extension.</p>
           </div>
         </div>
       )}
@@ -36,7 +44,7 @@ export function TxStatusTracker({ status, txHash, error, amount, recipientName, 
       {status === 'submitting' && (
         <div className="flex items-center gap-3">
           <span className="w-5 h-5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-          <span className="text-sm font-medium text-amber-600">Processing…</span>
+          <span className="text-sm font-medium text-amber-600">Processing on Stellar network…</span>
         </div>
       )}
 
@@ -50,6 +58,10 @@ export function TxStatusTracker({ status, txHash, error, amount, recipientName, 
                 <p className="text-xs text-slate-500">{amount} XLM → {recipientName}</p>
               )}
             </div>
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span>Network fee</span>
+            <span className="font-mono">{displayFee} XLM</span>
           </div>
           {txHash && (
             <a
@@ -77,7 +89,7 @@ export function TxStatusTracker({ status, txHash, error, amount, recipientName, 
           {onRetry && (
             <button
               onClick={onRetry}
-              className="text-sm font-medium text-teal-700 hover:text-teal-600 border border-teal-200 rounded-lg px-4 py-1.5 transition-colors"
+              className="text-sm font-medium text-teal-700 hover:text-teal-600 active:scale-95 border border-teal-200 rounded-lg px-4 py-1.5 transition-all"
             >
               Try Again
             </button>

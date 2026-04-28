@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, CheckCircle, Loader2, X, ExternalLink, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, CheckCircle, Loader2, X, ExternalLink, AlertTriangle, Store, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QRScanner } from '../../components/QRScanner';
 import type { QRScanMeta } from '../../components/QRScanner';
@@ -10,7 +10,7 @@ import { useVendor } from '../../lib/hooks/useVendor';
 import { usePayment } from '../../lib/hooks/usePayment';
 import { useCreateUtang } from '../../lib/hooks/useUtang';
 import type { UtangOfferPayload } from '../vendor/VendorUtang';
-import { stellarExpertUrl } from '../../lib/stellar';
+import { stellarExpertUrl, truncateAddress } from '../../lib/stellar';
 
 const STROOPS = 10_000_000;
 
@@ -23,7 +23,12 @@ function intervalLabel(secs: number) {
   return INTERVAL_LABELS[secs] ?? `every ${Math.round(secs / 86400)}d`;
 }
 
-type Step = 'scan' | 'manual' | 'pay' | 'done' | 'utang_offer' | 'utang_done';
+type Step = 'scan' | 'manual' | 'pay' | 'confirm' | 'done' | 'utang_offer' | 'utang_done';
+
+interface PendingPayment {
+  amount: string;
+  memo: string;
+}
 
 export function CustomerScan() {
   const navigate = useNavigate();
@@ -33,16 +38,22 @@ export function CustomerScan() {
   const [vendorAddress, setVendorAddress] = useState('');
   const [scannedMeta, setScannedMeta] = useState<QRScanMeta | null>(null);
   const [manualInput, setManualInput] = useState('');
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [utangOffer, setUtangOffer] = useState<UtangOfferPayload | null>(null);
   const [utangTxHash, setUtangTxHash] = useState<string | null>(null);
   const [utangAcceptStatus, setUtangAcceptStatus] = useState<'idle' | 'signing' | 'confirmed' | 'failed'>('idle');
   const [utangError, setUtangError] = useState<string | null>(null);
 
   const { vendor, isLoading: vendorLoading } = useVendor(
-    step === 'pay' || step === 'done' ? vendorAddress : null
+    step === 'pay' || step === 'confirm' || step === 'done' ? vendorAddress : null
   );
   const { status, txHash, error, sendPayment, reset } = usePayment();
   const { createUtang, isCreating } = useCreateUtang();
+
+  // Advance to done when payment confirms
+  useEffect(() => {
+    if (step === 'confirm' && status === 'confirmed') setStep('done');
+  }, [step, status]);
 
   // ── QR raw intercept: detect utang offer before payment parsing ──
   const handleRawScan = (raw: string): boolean => {
@@ -76,10 +87,17 @@ export function CustomerScan() {
     }
   };
 
-  const handlePay = async (amount: string, memo: string) => {
-    if (!address) return;
-    await sendPayment(address, vendorAddress, amount, memo);
-    if (status !== 'failed') setStep('done');
+  // PaymentForm submit → go to confirm step (don't sign yet)
+  const handlePay = (amount: string, memo: string) => {
+    setPendingPayment({ amount, memo });
+    reset();
+    setStep('confirm');
+  };
+
+  // Confirm screen → actually sign
+  const handleConfirm = async () => {
+    if (!address || !pendingPayment) return;
+    await sendPayment(address, vendorAddress, pendingPayment.amount, pendingPayment.memo);
   };
 
   const handleAcceptUtang = async () => {
@@ -111,6 +129,7 @@ export function CustomerScan() {
     setStep('scan');
     setUtangOffer(null);
     setUtangAcceptStatus('idle');
+    setPendingPayment(null);
     reset();
   };
 
@@ -118,10 +137,13 @@ export function CustomerScan() {
     scan: 'Scan QR',
     manual: 'Enter Address',
     pay: 'Pay Vendor',
+    confirm: 'Confirm Payment',
     done: 'Payment Sent!',
     utang_offer: 'Installment Offer',
     utang_done: 'Accepted!',
   };
+
+  const vendorDisplay = vendor?.name ?? scannedMeta?.name ?? truncateAddress(vendorAddress);
 
   if (!isConnected) {
     return (
@@ -195,49 +217,109 @@ export function CustomerScan() {
 
       {/* ── Step: payment form ─────────────────────────── */}
       {step === 'pay' && (
-        <>
-          <PaymentForm
-            vendorAddress={vendorAddress}
-            vendor={vendor}
-            isLoading={vendorLoading}
-            preloadedVendorName={scannedMeta?.name}
-            preloadedStallInfo={scannedMeta?.stallInfo}
-            onSubmit={handlePay}
-            disabled={status !== 'idle'}
-          />
-          {status !== 'idle' && (
-            <TxStatusTracker
-              status={status}
-              txHash={txHash}
-              error={error}
-              amount={undefined}
-              recipientName={vendor?.name ?? scannedMeta?.name}
-              onRetry={() => reset()}
-            />
-          )}
-        </>
+        <PaymentForm
+          vendorAddress={vendorAddress}
+          vendor={vendor}
+          isLoading={vendorLoading}
+          preloadedVendorName={scannedMeta?.name}
+          preloadedStallInfo={scannedMeta?.stallInfo}
+          onSubmit={handlePay}
+          disabled={false}
+        />
+      )}
+
+      {/* ── Step: confirm ──────────────────────────────── */}
+      {step === 'confirm' && pendingPayment && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+            <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Review before signing</p>
+          </div>
+          <div className="p-5 space-y-4">
+            {/* Vendor info */}
+            <div className="flex items-center gap-3 bg-teal-50 border border-teal-100 rounded-xl p-4">
+              <div className="w-10 h-10 rounded-full bg-teal-700 flex items-center justify-center shrink-0">
+                <Store size={16} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-teal-600 font-medium">Paying</p>
+                <p className="text-sm font-bold text-slate-900 truncate">{vendorDisplay}</p>
+              </div>
+            </div>
+
+            {/* Amount + memo */}
+            <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-500">Amount</span>
+                <span className="text-xl font-black text-teal-700">{pendingPayment.amount} XLM</span>
+              </div>
+              {pendingPayment.memo && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-500">Memo</span>
+                  <span className="text-sm font-semibold text-slate-800">{pendingPayment.memo}</span>
+                </div>
+              )}
+            </div>
+
+            {status === 'idle' && (
+              <button
+                onClick={handleConfirm}
+                className="w-full bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-4 rounded-xl transition-all text-base"
+              >
+                Confirm &amp; Sign
+              </button>
+            )}
+
+            {status !== 'idle' && status !== 'confirmed' && (
+              <TxStatusTracker
+                status={status}
+                txHash={txHash}
+                error={error}
+                amount={pendingPayment.amount}
+                recipientName={vendorDisplay}
+                onRetry={() => { reset(); }}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Step: payment done ─────────────────────────── */}
-      {step === 'done' && status === 'confirmed' && (
+      {step === 'done' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
           <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={28} className="text-green-600" />
           </div>
           <h2 className="text-lg font-bold text-slate-900 mb-1">Payment sent!</h2>
-          {(vendor?.name ?? scannedMeta?.name) && (
-            <p className="text-sm text-slate-500 mb-4">to {vendor?.name ?? scannedMeta?.name}</p>
+          {vendorDisplay && (
+            <p className="text-sm text-slate-500 mb-1">to {vendorDisplay}</p>
+          )}
+          {pendingPayment && (
+            <p className="text-xl font-black text-teal-700 mb-4">{pendingPayment.amount} XLM</p>
           )}
           {txHash && (
-            <a href={stellarExpertUrl(txHash)} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-teal-700 underline underline-offset-2 block mb-4">
-              View on Stellar Expert →
+            <a
+              href={stellarExpertUrl(txHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-teal-700 underline underline-offset-2 mb-6"
+            >
+              View receipt on Stellar Expert <ExternalLink size={12} />
             </a>
           )}
-          <button onClick={() => navigate('/customer/home')}
-            className="w-full bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl transition-colors">
-            Back to Home
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={backToScan}
+              className="flex items-center justify-center gap-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-3 rounded-xl text-sm transition-colors"
+            >
+              <RotateCcw size={14} /> Pay Again
+            </button>
+            <button
+              onClick={() => navigate('/customer/home')}
+              className="bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+            >
+              Home
+            </button>
+          </div>
         </div>
       )}
 
@@ -279,9 +361,11 @@ export function CustomerScan() {
             </div>
 
             {utangAcceptStatus === 'idle' && (
-              <button onClick={handleAcceptUtang}
-                className="w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-xl text-sm font-semibold transition-colors">
-                Accept & Sign
+              <button
+                onClick={handleAcceptUtang}
+                className="w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Accept &amp; Sign
               </button>
             )}
 
@@ -300,8 +384,10 @@ export function CustomerScan() {
                   <span className="text-sm font-semibold">Failed</span>
                 </div>
                 <p className="text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2 text-center">{utangError}</p>
-                <button onClick={handleAcceptUtang}
-                  className="w-full bg-teal-700 text-white py-2.5 rounded-xl text-sm font-semibold">
+                <button
+                  onClick={handleAcceptUtang}
+                  className="w-full bg-teal-700 text-white py-2.5 rounded-xl text-sm font-semibold"
+                >
                   Retry
                 </button>
               </div>
@@ -319,18 +405,26 @@ export function CustomerScan() {
           <h2 className="text-lg font-bold text-slate-900 mb-1">Agreement accepted!</h2>
           <p className="text-sm text-slate-500 mb-4">Installment plan is now active.</p>
           {utangTxHash && (
-            <a href={stellarExpertUrl(utangTxHash)} target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 text-sm text-teal-700 underline underline-offset-2 mb-4">
+            <a
+              href={stellarExpertUrl(utangTxHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 text-sm text-teal-700 underline underline-offset-2 mb-6"
+            >
               View on Stellar Expert <ExternalLink size={13} />
             </a>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => navigate('/customer/utang')}
-              className="border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors">
+            <button
+              onClick={() => navigate('/customer/utang')}
+              className="border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors"
+            >
               View Utang
             </button>
-            <button onClick={() => navigate('/customer/home')}
-              className="bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
+            <button
+              onClick={() => navigate('/customer/home')}
+              className="bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+            >
               Home
             </button>
           </div>

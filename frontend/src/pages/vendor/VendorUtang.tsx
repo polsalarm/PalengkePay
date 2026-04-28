@@ -218,11 +218,26 @@ export function VendorUtang() {
       )}
 
       {!isLoading && filtered.length === 0 && ESCROW_ID && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
-          <HandCoins size={32} className="text-slate-200 mx-auto mb-2" />
-          <p className="text-sm font-medium text-slate-400">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center mx-auto mb-4 border border-teal-100">
+            <HandCoins size={28} className="text-teal-400" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700 mb-1">
             {filter === 'all' ? 'No agreements yet' : `No ${filter} agreements`}
           </p>
+          {filter === 'all' && (
+            <>
+              <p className="text-xs text-slate-400 mb-5">
+                Create an installment agreement for a customer via QR or manual entry
+              </p>
+              <button
+                onClick={() => { setShowPanel(true); setMode('qr'); setStep('form'); }}
+                className="inline-flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 px-4 py-2 rounded-full transition-colors"
+              >
+                <Plus size={12} /> New Utang
+              </button>
+            </>
+          )}
         </div>
       )}
 
