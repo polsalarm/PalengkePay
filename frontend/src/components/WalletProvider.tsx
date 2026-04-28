@@ -88,6 +88,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const result = await StellarWalletsKit.authModal() as { address: string; name?: string };
       const addr = result.address;
       const name = result.name ?? null;
+      // Always trigger wallet popup for explicit sign-in confirmation
+      await StellarWalletsKit.signMessage('Sign in to PalengkePay', { address: addr });
       setAddress(addr);
       setWalletName(name);
       localStorage.setItem('palengkepay_address', addr);
@@ -95,7 +97,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       await refreshBalance(addr);
     } catch (err: unknown) {
       const msg = (err as { message?: string }).message ?? 'Connection failed';
-      if (!msg.includes('close') && !msg.includes('Cancel')) {
+      if (!msg.includes('close') && !msg.includes('Cancel') && !msg.includes('cancel')) {
         setError(msg);
       }
     } finally {
