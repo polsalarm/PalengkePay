@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Plus, X, HandCoins, AlertTriangle, ScanLine, Keyboard, QrCode, ChevronLeft, Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { useState, useRef } from 'react';
+import { Plus, X, HandCoins, AlertTriangle, ScanLine, Keyboard, QrCode, ChevronLeft, Loader2, CheckCircle, ShieldCheck, Download } from 'lucide-react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useVendorUtangs, useCreateUtang } from '../../lib/hooks/useUtang';
 import { UtangCard } from '../../components/UtangCard';
@@ -64,6 +64,7 @@ export function VendorUtang() {
   const [feeStatus, setFeeStatus] = useState<FeeStatus>('idle');
   const [feeError, setFeeError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'defaulted'>('all');
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const active = utangs.filter((u) => u.status === 'active');
   const filtered = filter === 'all' ? utangs : utangs.filter((u) => u.status === filter);
@@ -147,6 +148,15 @@ export function VendorUtang() {
     );
     if (hash) { handleClose(); refetch(); }
     else if (createError) setFormError(createError);
+  }
+
+  function downloadQR() {
+    const canvas = qrCanvasRef.current;
+    if (!canvas || !qrPayload) return;
+    const link = document.createElement('a');
+    link.download = `utang-qr-${qrPayload.d.slice(0, 30).replace(/\s+/g, '-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   }
 
   function handleClose() {
@@ -471,6 +481,17 @@ export function VendorUtang() {
             {/* ── QR display step ── */}
             {step === 'qr_display' && qrPayload && (
               <div className="space-y-5">
+                {/* Hidden canvas used for PNG download */}
+                <QRCodeCanvas
+                  ref={qrCanvasRef}
+                  value={JSON.stringify(qrPayload)}
+                  size={440}
+                  level="M"
+                  bgColor="#ffffff"
+                  fgColor="#0f172a"
+                  style={{ display: 'none' }}
+                />
+
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col items-center gap-4">
                   <div className="bg-white p-3 rounded-xl border-2 border-teal-200 shadow-sm">
                     <QRCodeSVG value={JSON.stringify(qrPayload)} size={220} level="M" bgColor="#ffffff" fgColor="#0f172a" />
@@ -482,6 +503,13 @@ export function VendorUtang() {
                     </p>
                   </div>
                 </div>
+
+                <button
+                  onClick={downloadQR}
+                  className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+                >
+                  <Download size={16} /> Download QR Image
+                </button>
 
                 <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-1.5">
                   <p className="text-sm font-semibold text-teal-800">How it works</p>
