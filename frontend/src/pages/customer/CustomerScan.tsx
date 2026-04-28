@@ -289,6 +289,7 @@ export function CustomerScan() {
               <div className="text-center py-3 space-y-2">
                 <Loader2 className="animate-spin mx-auto text-teal-600" size={24} />
                 <p className="text-sm text-slate-500">Confirm in your wallet…</p>
+                <p className="text-xs text-slate-400">On mobile: open LOBSTR app and approve.</p>
               </div>
             )}
 

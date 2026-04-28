@@ -28,7 +28,7 @@ export function TxStatusTracker({ status, txHash, error, amount, recipientName, 
           <Lock size={20} className="text-teal-700 shrink-0 animate-pulse" />
           <div>
             <p className="text-sm font-medium text-slate-800">Confirm in your wallet</p>
-            <p className="text-xs text-slate-400">Check your wallet app or extension</p>
+            <p className="text-xs text-slate-400">On mobile: open LOBSTR app and approve. On desktop: check your browser extension.</p>
           </div>
         </div>
       )}
