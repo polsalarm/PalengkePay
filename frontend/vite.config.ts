@@ -4,13 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  optimizeDeps: {
-    include: [
-      '@walletconnect/sign-client',
-      '@reown/appkit',
-      '@reown/appkit/core',
-    ],
-  },
   plugins: [
     react(),
     tailwindcss(),

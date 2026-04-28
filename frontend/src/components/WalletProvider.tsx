@@ -4,7 +4,6 @@ import { FreighterModule } from '@creit.tech/stellar-wallets-kit/modules/freight
 import { LobstrModule } from '@creit.tech/stellar-wallets-kit/modules/lobstr';
 import { xBullModule } from '@creit.tech/stellar-wallets-kit/modules/xbull';
 import { AlbedoModule } from '@creit.tech/stellar-wallets-kit/modules/albedo';
-import { WalletConnectModule, WalletConnectTargetChain } from '@creit.tech/stellar-wallets-kit/modules/wallet-connect';
 import { fetchBalance } from '../lib/stellar';
 
 export interface WalletContextValue {
@@ -20,25 +19,38 @@ export interface WalletContextValue {
 
 export const WalletContext = createContext<WalletContextValue | null>(null);
 
-StellarWalletsKit.init({
-  network: Networks.TESTNET,
-  modules: [
-    new WalletConnectModule({
-      projectId: 'c7916523a37cc092c33241c5bf3efcbd',
-      metadata: {
-        name: 'PalengkePay',
-        description: 'Stellar micropayments for Philippine wet market vendors',
-        url: 'https://palengkepay.vercel.app',
-        icons: ['https://palengkepay.vercel.app/pwa-192x192.png'],
-      },
-      allowedChains: [WalletConnectTargetChain.TESTNET],
-    }),
-    new FreighterModule(),
-    new LobstrModule(),
-    new xBullModule(),
-    new AlbedoModule(),
-  ],
-});
+// WalletConnect loaded via dynamic import — avoids @reown/appkit circular dep
+// crash during bundle evaluation in production builds
+let kitInitPromise: Promise<void> | null = null;
+
+function initKit(): Promise<void> {
+  if (!kitInitPromise) {
+    kitInitPromise = import('@creit.tech/stellar-wallets-kit/modules/wallet-connect').then(
+      ({ WalletConnectModule, WalletConnectTargetChain }) => {
+        StellarWalletsKit.init({
+          network: Networks.TESTNET,
+          modules: [
+            new WalletConnectModule({
+              projectId: 'c7916523a37cc092c33241c5bf3efcbd',
+              metadata: {
+                name: 'PalengkePay',
+                description: 'Stellar micropayments for Philippine wet market vendors',
+                url: 'https://palengke-pay.vercel.app',
+                icons: ['https://palengke-pay.vercel.app/icon-192.svg'],
+              },
+              allowedChains: [WalletConnectTargetChain.TESTNET],
+            }),
+            new FreighterModule(),
+            new LobstrModule(),
+            new xBullModule(),
+            new AlbedoModule(),
+          ],
+        });
+      }
+    );
+  }
+  return kitInitPromise;
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
@@ -61,12 +73,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setAddress(stored);
       refreshBalance(stored);
     }
+    initKit(); // pre-warm in background
   }, [refreshBalance]);
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
     try {
+      await initKit();
       const { address: addr } = await StellarWalletsKit.authModal();
       setAddress(addr);
       localStorage.setItem('palengkepay_address', addr);
@@ -94,6 +108,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const signTransaction = useCallback(async (xdr: string): Promise<string> => {
     if (!address) throw new Error('Wallet not connected');
+    await initKit();
     const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
       networkPassphrase: Networks.TESTNET,
       address,
