@@ -4,6 +4,7 @@ import { FreighterModule } from '@creit.tech/stellar-wallets-kit/modules/freight
 import { LobstrModule } from '@creit.tech/stellar-wallets-kit/modules/lobstr';
 import { xBullModule } from '@creit.tech/stellar-wallets-kit/modules/xbull';
 import { AlbedoModule } from '@creit.tech/stellar-wallets-kit/modules/albedo';
+import { WalletConnectModule, WalletConnectTargetChain } from '@creit.tech/stellar-wallets-kit/modules/wallet-connect';
 import { fetchBalance } from '../lib/stellar';
 
 export interface WalletContextValue {
@@ -22,6 +23,16 @@ export const WalletContext = createContext<WalletContextValue | null>(null);
 StellarWalletsKit.init({
   network: Networks.TESTNET,
   modules: [
+    new WalletConnectModule({
+      projectId: 'c7916523a37cc092c33241c5bf3efcbd',
+      metadata: {
+        name: 'PalengkePay',
+        description: 'Stellar micropayments for Philippine wet market vendors',
+        url: 'https://palengkepay.vercel.app',
+        icons: ['https://palengkepay.vercel.app/pwa-192x192.png'],
+      },
+      allowedChains: [WalletConnectTargetChain.TESTNET],
+    }),
     new FreighterModule(),
     new LobstrModule(),
     new xBullModule(),
