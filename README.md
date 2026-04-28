@@ -28,9 +28,11 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 
 ---
 
-## Screenshots
+## Live Walkthrough
 
-### Landing
+### Desktop — Web View
+
+**Landing**
 
 <img src="UI/WEB/landing/land1.png" alt="Landing — hero" width="100%" />
 
@@ -40,39 +42,29 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 
 <img src="UI/WEB/landing/land4.png" alt="Landing — footer" width="100%" />
 
----
-
-### Connect Wallet
+**Connect Wallet**
 
 <img src="UI/WEB/onboard/connect1.png" alt="Connect wallet" width="100%" />
 
----
-
-### Onboarding Flow
+**Onboarding Flow**
 
 | Get a Wallet | Connect | Fund | You're Ready |
 |:---:|:---:|:---:|:---:|
-| <img src="UI/WEB/onboard/onboard.png" alt="Step 1 — Get wallet" width="220" /> | <img src="UI/WEB/onboard/onboard1.png" alt="Step 2 — Connect" width="220" /> | <img src="UI/WEB/onboard/onboard2.png" alt="Step 3 — Fund" width="220" /> | <img src="UI/WEB/onboard/onbaord3.png" alt="Step 4 — Ready" width="220" /> |
+| <img src="UI/WEB/onboard/onboard.png" alt="Step 1" width="220" /> | <img src="UI/WEB/onboard/onboard1.png" alt="Step 2" width="220" /> | <img src="UI/WEB/onboard/onboard2.png" alt="Step 3" width="220" /> | <img src="UI/WEB/onboard/onbaord3.png" alt="Step 4" width="220" /> |
 
----
-
-### Vendor
+**Vendor**
 
 | Home | QR Code | Transactions | Utang | Profile | Apply |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="UI/WEB/vendor/home.png" alt="Vendor Home" width="160" /> | <img src="UI/WEB/vendor/qr.png" alt="Vendor QR" width="160" /> | <img src="UI/WEB/vendor/transactions.png" alt="Transactions" width="160" /> | <img src="UI/WEB/vendor/utang.png" alt="Vendor Utang" width="160" /> | <img src="UI/WEB/vendor/profile.png" alt="Profile" width="160" /> | <img src="UI/WEB/vendor/apply.png" alt="Apply" width="160" /> |
+| <img src="UI/WEB/vendor/home.png" alt="Vendor Home" width="160" /> | <img src="UI/WEB/vendor/qr.png" alt="QR" width="160" /> | <img src="UI/WEB/vendor/transactions.png" alt="Transactions" width="160" /> | <img src="UI/WEB/vendor/utang.png" alt="Utang" width="160" /> | <img src="UI/WEB/vendor/profile.png" alt="Profile" width="160" /> | <img src="UI/WEB/vendor/apply.png" alt="Apply" width="160" /> |
 
----
-
-### Customer
+**Customer**
 
 | Home | Scan & Pay | History | My Utang | Market Directory |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="UI/WEB/costumer/home.png" alt="Customer Home" width="180" /> | <img src="UI/WEB/costumer/scan.png" alt="Scan & Pay" width="180" /> | <img src="UI/WEB/costumer/history.png" alt="History" width="180" /> | <img src="UI/WEB/costumer/utang.png" alt="My Utang" width="180" /> | <img src="UI/WEB/costumer/market.png" alt="Market Directory" width="180" /> |
+| <img src="UI/WEB/costumer/home.png" alt="Customer Home" width="180" /> | <img src="UI/WEB/costumer/scan.png" alt="Scan & Pay" width="180" /> | <img src="UI/WEB/costumer/history.png" alt="History" width="180" /> | <img src="UI/WEB/costumer/utang.png" alt="My Utang" width="180" /> | <img src="UI/WEB/costumer/market.png" alt="Market" width="180" /> |
 
----
-
-### Admin
+**Admin**
 
 | Market Dashboard | Pending Approvals | Active Vendors | Manual Register |
 |:---:|:---:|:---:|:---:|
@@ -82,9 +74,23 @@ Beta users were onboarded via a Google Form collecting name, email, wallet addre
 
 ### Mobile
 
-| Customer Home | My Utang |
-|:---:|:---:|
-| <img src="docs/screenshots/mobile-customer-home.png" alt="Customer Home" width="220" /> | <img src="docs/screenshots/mobile-customer-utang.png" alt="My Utang" width="220" /> |
+**Landing**
+
+| | | | | |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="UI/MOBILE/landingpage/landm1.png" alt="Landing 1" width="160" /> | <img src="UI/MOBILE/landingpage/landm2.png" alt="Landing 2" width="160" /> | <img src="UI/MOBILE/landingpage/landm3.png" alt="Landing 3" width="160" /> | <img src="UI/MOBILE/landingpage/landm4.png" alt="Landing 4" width="160" /> | <img src="UI/MOBILE/landingpage/landm5.png" alt="Landing 5" width="160" /> |
+
+**Customer**
+
+| Home | Scan & Pay | History | My Utang | Market |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="UI/MOBILE/costumer/home.png" alt="Customer Home" width="160" /> | <img src="UI/MOBILE/costumer/scan.png" alt="Scan" width="160" /> | <img src="UI/MOBILE/costumer/history.png" alt="History" width="160" /> | <img src="UI/MOBILE/costumer/utang.png" alt="Utang" width="160" /> | <img src="UI/MOBILE/costumer/market.png" alt="Market" width="160" /> |
+
+**Vendor**
+
+| Home | QR Code | Utang | History | Profile |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="UI/MOBILE/vendor/home.png" alt="Vendor Home" width="160" /> | <img src="UI/MOBILE/vendor/qr.png" alt="QR" width="160" /> | <img src="UI/MOBILE/vendor/utang.png" alt="Utang" width="160" /> | <img src="UI/MOBILE/vendor/history.png" alt="History" width="160" /> | <img src="UI/MOBILE/vendor/profile.png" alt="Profile" width="160" /> |
 
 ---
 
