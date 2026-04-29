@@ -1,51 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getServer } from '../stellar';
 import { syncPayments, getCachedPayments } from '../indexer';
 import type { IndexedPayment } from '../indexer';
 
 export interface TxRecord {
-  id: string;       // tx hash
+  id: string;
   from: string;
   to: string;
   amountXlm: number;
-  createdAt: string; // ISO 8601
+  createdAt: string;
   memo?: string;
-}
-
-async function fetchPaymentsForAccount(address: string): Promise<TxRecord[]> {
-  const server = getServer();
-  const [paymentsPage, txsPage] = await Promise.all([
-    server.payments().forAccount(address).order('desc').limit(50).call(),
-    server.transactions().forAccount(address).order('desc').limit(50).call(),
-  ]);
-
-  const memoByHash = new Map<string, string>();
-  for (const tx of txsPage.records) {
-    const t = tx as { id: string; memo_type?: string; memo?: string };
-    if (t.memo_type === 'text' && t.memo) {
-      memoByHash.set(t.id, t.memo);
-    }
-  }
-
-  return paymentsPage.records
-    .filter((r) => r.type === 'payment' && (r as { asset_type: string }).asset_type === 'native')
-    .map((r) => {
-      const p = r as {
-        transaction_hash: string;
-        from: string;
-        to: string;
-        amount: string;
-        created_at: string;
-      };
-      return {
-        id: p.transaction_hash,
-        from: p.from,
-        to: p.to,
-        amountXlm: parseFloat(p.amount),
-        createdAt: p.created_at,
-        memo: memoByHash.get(p.transaction_hash),
-      };
-    });
 }
 
 export function useVendorTransactions(vendorWallet: string | null) {
