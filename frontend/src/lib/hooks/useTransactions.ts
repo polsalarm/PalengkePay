@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getServer } from '../stellar';
+import { syncPayments, getCachedPayments } from '../indexer';
+import type { IndexedPayment } from '../indexer';
 
 export interface TxRecord {
   id: string;       // tx hash
@@ -51,19 +53,25 @@ export function useVendorTransactions(vendorWallet: string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const toTxRecord = (p: IndexedPayment): TxRecord => p;
+
   const load = useCallback(async (wallet: string) => {
+    // Show cache immediately, then sync in background
+    const cached = getCachedPayments(wallet).filter((p) => p.to === wallet);
+    if (cached.length > 0) setTransactions(cached.map(toTxRecord));
+
     setIsLoading(true);
     setError(null);
     try {
-      const all = await fetchPaymentsForAccount(wallet);
-      setTransactions(all.filter((t) => t.to === wallet));
+      const all = await syncPayments(wallet);
+      setTransactions(all.filter((p) => p.to === wallet).map(toTxRecord));
     } catch (e: unknown) {
       setError((e as { message?: string }).message ?? 'Failed to load transactions');
-      setTransactions([]);
+      if (transactions.length === 0) setTransactions([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!vendorWallet) return;
@@ -97,14 +105,16 @@ export function useCustomerTransactions(customerWallet: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (wallet: string) => {
+    const cached = getCachedPayments(wallet).filter((p) => p.from === wallet);
+    if (cached.length > 0) setTransactions(cached);
+
     setIsLoading(true);
     setError(null);
     try {
-      const all = await fetchPaymentsForAccount(wallet);
-      setTransactions(all.filter((t) => t.from === wallet));
+      const all = await syncPayments(wallet);
+      setTransactions(all.filter((p) => p.from === wallet));
     } catch (e: unknown) {
       setError((e as { message?: string }).message ?? 'Failed to load transactions');
-      setTransactions([]);
     } finally {
       setIsLoading(false);
     }
