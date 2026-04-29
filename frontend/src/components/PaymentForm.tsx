@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, Store } from 'lucide-react';
+import { Send, Store, Zap } from 'lucide-react';
 import type { VendorProfile } from '../lib/hooks/useVendor';
 
 const MEMO_MAX = 28;
@@ -132,6 +132,11 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
         <Send size={18} />
         Pay Now
       </button>
+
+      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
+        <Zap size={11} className="text-teal-500" />
+        <span>Gasless — fees sponsored, zero cost to you</span>
+      </div>
     </form>
   );
 }
