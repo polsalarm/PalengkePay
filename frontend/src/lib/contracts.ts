@@ -1,5 +1,5 @@
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
-import { buildPaymentTx, submitTx } from './stellar';
+import { buildPaymentTx, submitWithFeeBump } from './stellar';
 
 export const PAYMENT_CONTRACT_ID = import.meta.env.VITE_PALENGKE_PAYMENT_CONTRACT_ID as string | undefined;
 export const REGISTRY_CONTRACT_ID = import.meta.env.VITE_VENDOR_REGISTRY_CONTRACT_ID as string | undefined;
@@ -23,6 +23,6 @@ export async function sendPayment(
     networkPassphrase: Networks.TESTNET,
     address: from,
   });
-  const result = await submitTx(signedXdr.signedTxXdr);
+  const result = await submitWithFeeBump(signedXdr.signedTxXdr);
   return { txHash: result.hash };
 }

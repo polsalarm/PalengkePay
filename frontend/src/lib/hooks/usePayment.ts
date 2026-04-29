@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { buildPaymentTx, submitTx } from '../stellar';
+import { buildPaymentTx, submitWithFeeBump } from '../stellar';
 import { StellarWalletsKit, Networks } from '@creit.tech/stellar-wallets-kit';
 
 export type TxStatus = 'idle' | 'building' | 'signing' | 'submitting' | 'confirmed' | 'failed';
@@ -34,7 +34,7 @@ export function usePayment() {
       });
 
       setState((s) => ({ ...s, status: 'submitting' }));
-      const result = await submitTx(signedTxXdr);
+      const result = await submitWithFeeBump(signedTxXdr);
 
       setState({ status: 'confirmed', txHash: result.hash, error: null });
     } catch (err: unknown) {
