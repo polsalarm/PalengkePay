@@ -10,12 +10,24 @@ import phoneImg from '../assets/phone.jpg';
 // ── Main component ──────────────────────────────────────────────────────────
 export function Landing() {
   const navigate = useNavigate();
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, connect } = useWallet();
 
   const handleVendorClick = async () => {
-    if (!isConnected || !address) { navigate('/vendor/apply'); return; }
-    const registered = await isRegisteredVendor(address);
+    let addr = address;
+    if (!isConnected || !addr) {
+      addr = await connect();
+      if (!addr) return;
+    }
+    const registered = await isRegisteredVendor(addr);
     navigate(registered ? '/vendor/home' : '/vendor/apply');
+  };
+
+  const handleCustomerClick = async () => {
+    if (!isConnected || !address) {
+      const addr = await connect();
+      if (!addr) return;
+    }
+    navigate('/customer/home');
   };
 
   return (
@@ -38,7 +50,7 @@ export function Landing() {
 
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-500">
             <button onClick={handleVendorClick} className="hover:text-slate-900 transition-colors">For Vendors</button>
-            <button onClick={() => navigate('/customer/scan')} className="hover:text-slate-900 transition-colors">For Customers</button>
+            <button onClick={handleCustomerClick} className="hover:text-slate-900 transition-colors">For Customers</button>
             <a href="#how-it-works" className="hover:text-slate-900 transition-colors">How it works</a>
             <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
           </nav>
@@ -117,7 +129,7 @@ export function Landing() {
                 <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button
-                onClick={() => navigate('/customer/scan')}
+                onClick={handleCustomerClick}
                 className="group flex items-center justify-center gap-2.5 font-bold px-8 py-4 rounded-2xl transition-all active:scale-95 text-base border bg-white hover:bg-slate-50"
                 style={{ borderColor: '#E2E8F0', color: '#334155' }}
               >
