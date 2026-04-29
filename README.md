@@ -117,6 +117,36 @@ PalengkePay puts a Stellar wallet in every vendor's pocket and a QR code on ever
 
 ---
 
+## Advanced Features
+
+### ⚡ Gasless Transactions (Fee Sponsorship)
+Customers and vendors pay **zero network fees**. A server-side sponsor wallet wraps every payment in a Stellar FeeBumpTransaction, covering the base fee transparently. Users sign the inner transaction; the sponsor covers the fee. Removes the #1 adoption blocker for first-time crypto users.
+
+- `frontend/api/fee-bump.ts` — Vercel serverless function wraps inner XDR with FeeBumpTransaction
+- `SPONSOR_SECRET` stays server-only; never shipped to the client
+- Badge shown in payment form: "Gasless — fees sponsored, zero cost to you"
+
+### 📊 Metrics Dashboard
+Live admin metrics aggregated from on-chain Soroban data — accessible at `/admin/metrics`.
+
+- Total vendors, active vs. pending counts
+- Total XLM volume, transaction count, average transaction size
+- Product category breakdown (horizontal bars)
+- Top 5 vendors by volume (progress bars)
+
+### 🗂 Data Indexing
+Cursor-based Horizon payment indexer with localStorage caching.
+
+- `frontend/src/lib/indexer.ts` — fetches since last cursor, merges into cache, returns newest-first
+- Vendor and customer transaction views load instantly from cache, sync in background
+- Zero extra infrastructure — pure Horizon + browser storage
+
+### 🔍 Monitoring
+- Sentry error tracking initialized in `main.tsx` — disabled automatically if `VITE_SENTRY_DSN` is unset
+- `frontend/api/health.ts` — `/api/health` endpoint checks Horizon + Soroban RPC liveness, returns `{status: 'ok'|'degraded'}`
+
+---
+
 ## Core Features
 
 ### Payments
@@ -362,6 +392,9 @@ VITE_UTANG_FEE_XLM=1
 | Blockchain | Stellar Testnet + Soroban smart contracts (Rust, `soroban-sdk` 22.x) |
 | QR | `qrcode.react` (generate + download) · `html5-qrcode` (camera scan + image upload) |
 | PWA | `vite-plugin-pwa` + Workbox |
+| Fee Sponsorship | Vercel serverless function (`api/fee-bump.ts`) + Stellar FeeBumpTransaction |
+| Monitoring | `@sentry/react` + `/api/health` Horizon + RPC liveness check |
+| Security | CSP + X-Frame-Options headers in `vercel.json` · input sanitization in `src/lib/sanitize.ts` |
 
 ---
 
