@@ -52,6 +52,22 @@ export function usePayment() {
 
 function parseWalletError(err: unknown): string {
   if (!err) return 'Unknown error';
+
+  // Extract Horizon result_codes from stellar-sdk 400 errors
+  type HorizonErr = { response?: { data?: { extras?: { result_codes?: { transaction?: string; operations?: string[] } } } } };
+  const rc = (err as HorizonErr).response?.data?.extras?.result_codes;
+  if (rc) {
+    const tx = rc.transaction;
+    const ops = rc.operations ?? [];
+    if (tx === 'tx_bad_seq')         return 'Sequence error — please try again';
+    if (tx === 'tx_insufficient_fee') return 'Network fee too low — please try again';
+    if (tx === 'tx_bad_auth')        return 'Invalid signature — reconnect wallet';
+    if (ops.includes('op_no_destination')) return 'Vendor account not activated on Stellar testnet';
+    if (ops.includes('op_underfunded'))    return 'Insufficient XLM balance';
+    if (ops.includes('op_low_reserve'))    return 'Account below minimum XLM reserve';
+    return `Transaction failed: ${tx ?? ops.join(', ') ?? 'unknown'}`;
+  }
+
   const msg = (err as { message?: string }).message ?? String(err);
   if (msg.includes('rejected') || msg.includes('cancel') || msg.includes('denied')) {
     return 'Transaction cancelled — no funds sent';

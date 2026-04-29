@@ -29,24 +29,34 @@ export async function buildPaymentTx(
   memo?: string
 ): Promise<string> {
   const server = getServer();
-  const account = await server.loadAccount(from);
+  const [account, destExists] = await Promise.all([
+    server.loadAccount(from),
+    server.loadAccount(to).then(() => true).catch(() => false),
+  ]);
+
+  const parsedAmount = parseFloat(amount).toFixed(7);
   const builder = new TransactionBuilder(account, {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
-  }).addOperation(
-    Operation.payment({
+  });
+
+  if (destExists) {
+    builder.addOperation(Operation.payment({
       destination: to,
       asset: Asset.native(),
-      amount: parseFloat(amount).toFixed(7),
-    })
-  );
-
-  if (memo) {
-    builder.addMemo(Memo.text(memo.slice(0, 28)));
+      amount: parsedAmount,
+    }));
+  } else {
+    // Destination account not yet funded on testnet — activate + pay in one op
+    builder.addOperation(Operation.createAccount({
+      destination: to,
+      startingBalance: parsedAmount,
+    }));
   }
 
-  const tx = builder.setTimeout(30).build();
-  return tx.toXDR();
+  if (memo) builder.addMemo(Memo.text(memo.slice(0, 28)));
+
+  return builder.setTimeout(300).build().toXDR();
 }
 
 export async function submitTx(signedXdr: string): Promise<Horizon.HorizonApi.SubmitTransactionResponse> {

@@ -18,7 +18,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
     const feeBump = TransactionBuilder.buildFeeBumpTransaction(
       sponsorKeypair,
-      '500',
+      '10000',
       innerTx,
       Networks.TESTNET,
     );
