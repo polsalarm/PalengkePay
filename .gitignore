@@ -55,6 +55,9 @@ firestore-debug.log
 coverage/
 image.png
 
+# Seed script output — contains private keys
+scripts/seed/seed-output.json
+
 # Internal docs and planning files
 docs/
 UI_UX_IMPROVEMENTS.md
