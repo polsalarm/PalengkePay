@@ -18,6 +18,7 @@ import { CustomerHistory } from './pages/customer/CustomerHistory';
 import { CustomerUtang } from './pages/customer/CustomerUtang';
 import { AdminMarket } from './pages/admin/AdminMarket';
 import { AdminRegister } from './pages/admin/AdminRegister';
+import { AdminMetrics } from './pages/admin/AdminMetrics';
 import { VendorApply } from './pages/vendor/VendorApply';
 import { MarketDirectory } from './pages/MarketDirectory';
 
@@ -53,6 +54,7 @@ export default function App() {
             {/* Admin */}
             <Route path="/admin/market" element={<AdminMarket />} />
             <Route path="/admin/register" element={<AdminRegister />} />
+            <Route path="/admin/metrics" element={<AdminMetrics />} />
 
             {/* Vendor apply (public) */}
             <Route path="/vendor/apply" element={<VendorApply />} />

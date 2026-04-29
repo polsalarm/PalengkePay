@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle, XCircle, Loader2, Users, Clock, ExternalLink, UserPlus,
-  RefreshCw, ShieldCheck, PowerOff, AlertTriangle, X } from 'lucide-react';
+  RefreshCw, ShieldCheck, PowerOff, AlertTriangle, X, BarChart2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { usePendingVendors, useAllVendors, useAdminActions } from '../../lib/hooks/useVendor';
@@ -267,12 +267,20 @@ export function AdminMarket() {
               <p className="text-teal-300 text-xs font-mono">{truncateAddress(address ?? '')}</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/admin/register')}
-            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-          >
-            <UserPlus size={13} /> Register
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/admin/metrics')}
+              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+            >
+              <BarChart2 size={13} /> Metrics
+            </button>
+            <button
+              onClick={() => navigate('/admin/register')}
+              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+            >
+              <UserPlus size={13} /> Register
+            </button>
+          </div>
         </div>
 
         {/* Tab stats */}
