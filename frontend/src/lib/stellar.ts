@@ -171,7 +171,8 @@ export function stringToScVal(value: string): xdr.ScVal {
 
 // ── Fee Bump (Gasless) ────────────────────────────────────────────────────────
 
-/** Send signed inner XDR through the fee-bump server. Sponsor pays the fee. */
+/** Send signed inner XDR through the fee-bump server. Sponsor pays the fee.
+ *  Falls back to direct Horizon submit when fee-bump endpoint is unavailable (local dev). */
 export async function submitWithFeeBump(signedInnerXdr: string): Promise<Horizon.HorizonApi.SubmitTransactionResponse> {
   const feeBumpUrl = import.meta.env.VITE_FEE_BUMP_URL ?? '/api/fee-bump';
 
@@ -180,6 +181,11 @@ export async function submitWithFeeBump(signedInnerXdr: string): Promise<Horizon
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ innerXdr: signedInnerXdr }),
   });
+
+  if (res.status === 404) {
+    // Fee-bump endpoint not available (local dev) — submit inner tx directly
+    return submitTx(signedInnerXdr);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: 'Fee bump failed' })) as { error?: string };
