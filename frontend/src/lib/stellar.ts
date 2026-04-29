@@ -159,6 +159,27 @@ export function stringToScVal(value: string): xdr.ScVal {
   return nativeToScVal(value, { type: 'string' });
 }
 
+// ── Fee Bump (Gasless) ────────────────────────────────────────────────────────
+
+/** Send signed inner XDR through the fee-bump server. Sponsor pays the fee. */
+export async function submitWithFeeBump(signedInnerXdr: string): Promise<Horizon.HorizonApi.SubmitTransactionResponse> {
+  const feeBumpUrl = import.meta.env.VITE_FEE_BUMP_URL ?? '/api/fee-bump';
+
+  const res = await fetch(feeBumpUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ innerXdr: signedInnerXdr }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Fee bump failed' })) as { error?: string };
+    throw new Error(body.error ?? 'Fee bump failed');
+  }
+
+  const { feeBumpXdr } = await res.json() as { feeBumpXdr: string };
+  return submitTx(feeBumpXdr);
+}
+
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 export function truncateAddress(address: string): string {
