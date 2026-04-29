@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ShieldCheck, Loader2, Zap } from 'lucide-react';
 import { useWallet } from '../lib/hooks/useWallet';
 
 const WALLETS = [
@@ -11,10 +11,18 @@ const WALLETS = [
   { id: 'walletconnect', letter: 'W', color: '#0F766E', bg: '#F0FDFA', name: 'WalletConnect',   sub: 'Connect mobile wallet' },
 ];
 
+async function fundWithFriendbot(address: string): Promise<void> {
+  const res = await fetch(`https://friendbot.stellar.org/?addr=${encodeURIComponent(address)}`);
+  if (!res.ok) throw new Error('Friendbot failed');
+}
+
 export function Connect() {
-  const { isConnected, connect, isConnecting } = useWallet();
+  const { isConnected, connect, isConnecting, address } = useWallet();
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [funding, setFunding] = useState(false);
+  const [funded, setFunded] = useState(false);
+  const [fundError, setFundError] = useState<string | null>(null);
   const attempted = useRef(false);
 
   // Only redirect after explicit user click — not on mount
@@ -27,6 +35,20 @@ export function Connect() {
     setConnecting(id);
     await connect();
     setConnecting(null);
+  };
+
+  const handleFriendbot = async () => {
+    if (!address) return;
+    setFunding(true);
+    setFundError(null);
+    try {
+      await fundWithFriendbot(address);
+      setFunded(true);
+    } catch {
+      setFundError('Friendbot failed — already funded or network error');
+    } finally {
+      setFunding(false);
+    }
   };
 
   return (
@@ -157,6 +179,36 @@ export function Connect() {
                 );
               })}
             </div>
+
+            {/* Friendbot faucet — shown after wallet connected */}
+            {isConnected && address && (
+              <div
+                className="rounded-2xl p-4 mb-6 border"
+                style={{ backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap size={14} style={{ color: '#0F766E' }} />
+                  <p className="text-sm font-bold text-slate-800">Get Testnet XLM (Free)</p>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                  Fund your wallet with free testnet XLM via Stellar Friendbot. One-time per account.
+                </p>
+                {funded ? (
+                  <p className="text-xs font-bold" style={{ color: '#0F766E' }}>✓ Wallet funded with 10,000 testnet XLM!</p>
+                ) : (
+                  <button
+                    onClick={handleFriendbot}
+                    disabled={funding}
+                    className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all active:scale-95 disabled:opacity-60"
+                    style={{ backgroundColor: '#0F766E', color: 'white' }}
+                  >
+                    {funding ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+                    {funding ? 'Funding…' : 'Fund with Friendbot'}
+                  </button>
+                )}
+                {fundError && <p className="text-xs text-red-500 mt-2">{fundError}</p>}
+              </div>
+            )}
 
             {/* No wallet CTA */}
             <div className="text-center">
