@@ -145,6 +145,8 @@ Cursor-based Horizon payment indexer with localStorage caching.
 - Sentry error tracking initialized in `main.tsx` — disabled automatically if `VITE_SENTRY_DSN` is unset
 - `frontend/api/health.ts` — `/api/health` endpoint checks Horizon + Soroban RPC liveness, returns `{status: 'ok'|'degraded'}`
 
+![Sentry Dashboard](assets/sentry-dashboard.png)
+
 ---
 
 ## Core Features
