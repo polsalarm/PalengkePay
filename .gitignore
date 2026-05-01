@@ -63,7 +63,6 @@ docs/
 !docs/contract-deployment.md
 UI_UX_IMPROVEMENTS.md
 frontend/README.md
-contracts/README.md
 
 # Claude Code local config — personal, not project files
 .claude/
