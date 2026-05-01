@@ -60,6 +60,7 @@ scripts/seed/seed-output.json
 
 # Internal docs and planning files
 docs/
+!docs/contract-deployment.md
 UI_UX_IMPROVEMENTS.md
 frontend/README.md
 contracts/README.md
