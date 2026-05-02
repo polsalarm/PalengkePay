@@ -22,7 +22,9 @@
 
 [![PalengkePay Introduction](https://img.youtube.com/vi/WmEz41GHeng/0.jpg)](https://www.youtube.com/shorts/WmEz41GHeng?feature=share)
 
-**[Watch full MVP walkthrough on YouTube →](https://youtu.be/hOiuXBG5A3Q?si=lLhgmeAsGQVen8e1)**
+**⭐ Recommended — [Watch full MVP walkthrough on YouTube →](https://youtu.be/hOiuXBG5A3Q?si=lLhgmeAsGQVen8e1)**
+
+[![PalengkePay Full MVP Walkthrough](https://img.youtube.com/vi/hOiuXBG5A3Q/0.jpg)](https://youtu.be/hOiuXBG5A3Q?si=lLhgmeAsGQVen8e1)
 
 ## 📊 User Feedback
 
