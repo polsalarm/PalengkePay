@@ -18,6 +18,10 @@
 
 ## 🎥 Demo Video
 
+**[▶ Introduction — PalengkePay in 60 seconds](https://www.youtube.com/shorts/WmEz41GHeng?feature=share)**
+
+[![PalengkePay Introduction](https://img.youtube.com/vi/WmEz41GHeng/0.jpg)](https://www.youtube.com/shorts/WmEz41GHeng?feature=share)
+
 **[Watch full MVP walkthrough on YouTube →](https://youtu.be/hOiuXBG5A3Q?si=lLhgmeAsGQVen8e1)**
 
 ## 📊 User Feedback
