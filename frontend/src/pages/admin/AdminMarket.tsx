@@ -8,27 +8,26 @@ import type { VendorProfile, VendorApplication } from '../../lib/hooks/useVendor
 import { useToast } from '../../components/Toast';
 import { truncateAddress } from '../../lib/stellar';
 
-const PRODUCT_COLORS: Record<string, string> = {
-  fish:            'bg-blue-100 text-blue-700',
-  meat:            'bg-red-100 text-red-700',
-  vegetables:      'bg-green-100 text-green-700',
-  fruits:          'bg-orange-100 text-orange-700',
-  'rice & grains': 'bg-yellow-100 text-yellow-700',
-  spices:          'bg-purple-100 text-purple-700',
-  other:           'bg-slate-100 text-slate-600',
+const PRODUCT_META: Record<string, { emoji: string; label: string; accent: string; bg: string; chipBg: string; chipColor: string }> = {
+  fish:            { emoji: '🐟', label: 'Fish',          accent: '#2563EB', bg: '#EFF6FF', chipBg: '#DBEAFE', chipColor: '#1D4ED8' },
+  meat:            { emoji: '🥩', label: 'Meat',          accent: '#DC2626', bg: '#FEF2F2', chipBg: '#FEE2E2', chipColor: '#B91C1C' },
+  vegetables:      { emoji: '🥦', label: 'Vegetables',    accent: '#16A34A', bg: '#F0FDF4', chipBg: '#DCFCE7', chipColor: '#15803D' },
+  fruits:          { emoji: '🍎', label: 'Fruits',        accent: '#EA580C', bg: '#FFF7ED', chipBg: '#FED7AA', chipColor: '#C2410C' },
+  'rice & grains': { emoji: '🌾', label: 'Rice & Grains', accent: '#CA8A04', bg: '#FEFCE8', chipBg: '#FEF08A', chipColor: '#A16207' },
+  spices:          { emoji: '🌶️', label: 'Spices',        accent: '#DB2777', bg: '#FDF2F8', chipBg: '#FBCFE8', chipColor: '#BE185D' },
+  other:           { emoji: '🛒', label: 'Other',         accent: '#475569', bg: '#F8FAFC', chipBg: '#E2E8F0', chipColor: '#334155' },
 };
 
-const PRODUCT_EMOJIS: Record<string, string> = {
-  fish: '🐟', meat: '🥩', vegetables: '🥦', fruits: '🍎',
-  'rice & grains': '🌾', spices: '🌶️', other: '🛒',
-};
+const AVATAR_COLORS = ['#0F766E', '#4F46E5', '#D97706', '#F43F5E', '#7C3AED'];
 
 function Avatar({ name }: { name: string }) {
   const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
-  const colors = ['bg-teal-500', 'bg-indigo-500', 'bg-amber-500', 'bg-rose-500', 'bg-violet-500'];
-  const color = colors[name.charCodeAt(0) % colors.length];
+  const color = AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
   return (
-    <div className={`w-12 h-12 ${color} rounded-2xl flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+    <div
+      className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shrink-0"
+      style={{ backgroundColor: color, fontFamily: "'Syne', sans-serif" }}
+    >
       {initials || '?'}
     </div>
   );
@@ -39,54 +38,74 @@ type Tab = 'pending' | 'vendors';
 // ── Application card ──────────────────────────────────────────────────────────
 
 function ApplicationCard({
-  app,
-  onApprove,
-  onReject,
-  loading,
+  app, onApprove, onReject, loading,
 }: {
   app: VendorApplication;
   onApprove: () => void;
   onReject: () => void;
   loading: boolean;
 }) {
+  const meta = PRODUCT_META[app.productType] ?? PRODUCT_META.other;
   return (
-    <div className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm space-y-4">
-      {/* Vendor info */}
-      <div className="flex items-start gap-3">
-        <Avatar name={app.name} />
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-slate-900 text-base">{app.name}</p>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-sm text-slate-500 font-medium">Stall {app.stallNumber}</span>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${PRODUCT_COLORS[app.productType] ?? PRODUCT_COLORS.other}`}>
-              {PRODUCT_EMOJIS[app.productType] ?? '🛒'} {app.productType}
-            </span>
-          </div>
-          {app.phone && (
-            <p className="text-sm text-slate-500 mt-1">📞 {app.phone}</p>
-          )}
-          <p className="text-xs font-mono text-slate-400 mt-1">{truncateAddress(app.wallet)}</p>
-        </div>
+    <div className="rounded-3xl overflow-hidden" style={{ border: `1.5px solid ${meta.accent}28` }}>
+
+      {/* Colored header — same pattern as MarketDirectory */}
+      <div
+        className="px-4 pt-4 pb-3 flex items-center justify-between gap-3"
+        style={{ backgroundColor: meta.bg }}
+      >
+        <span className="text-4xl leading-none select-none">{meta.emoji}</span>
+        <span
+          className="text-xs font-bold px-2.5 py-1 rounded-full capitalize"
+          style={{ backgroundColor: meta.chipBg, color: meta.chipColor }}
+        >
+          {meta.label}
+        </span>
       </div>
 
-      {/* Action buttons */}
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={onApprove}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50 text-sm"
-        >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-          Approve
-        </button>
-        <button
-          onClick={onReject}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 active:scale-95 border border-red-200 text-red-600 font-bold py-3 rounded-xl transition-all disabled:opacity-50 text-sm"
-        >
-          <XCircle size={16} />
-          Decline
-        </button>
+      {/* White body */}
+      <div className="bg-white p-4 space-y-4">
+        <div className="flex items-start gap-3">
+          <Avatar name={app.name} />
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>{app.name}</p>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">Stall {app.stallNumber}</p>
+            {app.phone && <p className="text-xs text-slate-400 mt-0.5">📞 {app.phone}</p>}
+            <p className="text-xs font-mono mt-1" style={{ color: '#CBD5E1' }}>{truncateAddress(app.wallet)}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onApprove}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 text-white font-black rounded-2xl active:scale-95 transition-all disabled:opacity-40 text-sm"
+            style={{
+              backgroundColor: '#0F766E',
+              minHeight: '48px',
+              fontFamily: "'Syne', sans-serif",
+              boxShadow: '0 4px 16px rgba(15,118,110,0.3)',
+            }}
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+            Approve
+          </button>
+          <button
+            onClick={onReject}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 font-black rounded-2xl active:scale-95 transition-all disabled:opacity-40 text-sm"
+            style={{
+              minHeight: '48px',
+              backgroundColor: '#FFF1F2',
+              border: '1.5px solid #FECDD3',
+              color: '#F43F5E',
+              fontFamily: "'Syne', sans-serif",
+            }}
+          >
+            <XCircle size={16} />
+            Decline
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -95,107 +114,142 @@ function ApplicationCard({
 // ── Vendor card ───────────────────────────────────────────────────────────────
 
 function VendorCard({
-  vendor,
-  onDeactivate,
-  loading,
+  vendor, onDeactivate, loading,
 }: {
   vendor: VendorProfile;
   onDeactivate: () => void;
   loading: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const meta = PRODUCT_META[vendor.productType] ?? PRODUCT_META.other;
 
   return (
-    <div className={`p-5 border rounded-2xl bg-white shadow-sm space-y-3 transition-colors ${
-      !vendor.isActive ? 'opacity-60 border-slate-200' : 'border-slate-200'
-    }`}>
-      {/* Vendor info */}
-      <div className="flex items-start gap-3">
-        <Avatar name={vendor.name} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-bold text-slate-900 text-base">{vendor.name}</p>
-            {vendor.isActive
-              ? <span className="text-xs font-bold bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full">● Active</span>
-              : <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full">● Inactive</span>
-            }
-          </div>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-sm text-slate-500 font-medium">Stall {vendor.stallNumber}</span>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${PRODUCT_COLORS[vendor.productType] ?? PRODUCT_COLORS.other}`}>
-              {PRODUCT_EMOJIS[vendor.productType] ?? '🛒'} {vendor.productType}
-            </span>
-          </div>
-          {vendor.phone && (
-            <p className="text-sm text-slate-500 mt-1">📞 {vendor.phone}</p>
-          )}
+    <div
+      className="rounded-3xl overflow-hidden transition-opacity"
+      style={{
+        border: `1.5px solid ${vendor.isActive ? meta.accent + '28' : '#F1F5F9'}`,
+        opacity: vendor.isActive ? 1 : 0.55,
+      }}
+    >
+      {/* Colored accent strip */}
+      <div
+        className="px-4 pt-3 pb-2 flex items-center justify-between gap-2"
+        style={{ backgroundColor: meta.bg }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-2xl leading-none select-none">{meta.emoji}</span>
+          <span
+            className="text-xs font-bold px-2 py-0.5 rounded-full capitalize"
+            style={{ backgroundColor: meta.chipBg, color: meta.chipColor }}
+          >
+            {meta.label}
+          </span>
         </div>
+        {vendor.isActive ? (
+          <span
+            className="text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1"
+            style={{ backgroundColor: '#F0FDF4', color: '#16A34A' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#22C55E' }} />
+            Active
+          </span>
+        ) : (
+          <span
+            className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+            style={{ backgroundColor: '#F8FAFC', color: '#94A3B8' }}
+          >
+            Inactive
+          </span>
+        )}
       </div>
 
-      {/* Stats row */}
-      <div className="flex items-center gap-4 px-1">
-        <div>
-          <p className="text-xl font-bold text-slate-900">{vendor.totalTransactions}</p>
-          <p className="text-xs text-slate-400">transactions</p>
+      <div className="bg-white p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <Avatar name={vendor.name} />
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>{vendor.name}</p>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">Stall {vendor.stallNumber}</p>
+            {vendor.phone && (
+              <p className="text-xs text-slate-400 mt-0.5">📞 {vendor.phone}</p>
+            )}
+          </div>
         </div>
-        <div className="w-px h-8 bg-slate-200" />
-        <div>
-          <p className="text-xl font-bold text-slate-900">
-            {(Number(vendor.totalVolume) / 10_000_000).toFixed(1)}
-          </p>
-          <p className="text-xs text-slate-400">XLM volume</p>
+
+        <div className="flex items-center gap-4 px-1 py-2 rounded-2xl" style={{ backgroundColor: '#F8FAFC' }}>
+          <div className="flex-1 text-center">
+            <p className="text-xl font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>
+              {vendor.totalTransactions}
+            </p>
+            <p className="text-xs text-slate-400">transactions</p>
+          </div>
+          <div className="w-px h-8" style={{ backgroundColor: '#E2E8F0' }} />
+          <div className="flex-1 text-center">
+            <p className="text-xl font-black" style={{ fontFamily: "'Syne', sans-serif", color: '#0F766E' }}>
+              {(Number(vendor.totalVolume) / 10_000_000).toFixed(1)}
+            </p>
+            <p className="text-xs text-slate-400">XLM volume</p>
+          </div>
+          <a
+            href={`https://stellar.expert/explorer/testnet/account/${vendor.marketId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pr-2 active:scale-95 transition-all"
+            style={{ color: '#CBD5E1' }}
+          >
+            <ExternalLink size={14} />
+          </a>
         </div>
-        <a
-          href={`https://stellar.expert/explorer/testnet/account/${vendor.marketId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-auto text-slate-400 hover:text-teal-600 transition-colors"
-        >
-          <ExternalLink size={14} />
-        </a>
+
+        {vendor.isActive && !confirming && (
+          <button
+            onClick={() => setConfirming(true)}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 font-bold rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-40"
+            style={{
+              minHeight: '44px',
+              border: '1.5px solid #F1F5F9',
+              color: '#94A3B8',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <PowerOff size={14} />
+            Deactivate Vendor
+          </button>
+        )}
+
+        {confirming && (
+          <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: '#FFF1F2', border: '1.5px solid #FECDD3' }}>
+            <div className="flex items-center gap-2" style={{ color: '#F43F5E' }}>
+              <AlertTriangle size={15} />
+              <p className="text-sm font-black" style={{ fontFamily: "'Syne', sans-serif" }}>
+                Deactivate {vendor.name}?
+              </p>
+            </div>
+            <p className="text-xs" style={{ color: '#F43F5E', opacity: 0.75 }}>
+              Marks vendor as inactive on-chain. They will no longer appear active in the market.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setConfirming(false); onDeactivate(); }}
+                disabled={loading}
+                className="flex items-center justify-center gap-1.5 text-white font-black rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-40"
+                style={{ backgroundColor: '#F43F5E', minHeight: '44px', fontFamily: "'Syne', sans-serif" }}
+              >
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <PowerOff size={14} />}
+                Deactivate
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="flex items-center justify-center gap-1.5 font-bold rounded-2xl active:scale-95 transition-all text-sm"
+                style={{ minHeight: '44px', border: '1.5px solid #FECDD3', color: '#F43F5E', backgroundColor: 'transparent' }}
+              >
+                <X size={14} />
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Deactivate button or confirmation */}
-      {vendor.isActive && !confirming && (
-        <button
-          onClick={() => setConfirming(true)}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 border border-slate-200 hover:border-red-200 hover:bg-red-50 text-slate-500 hover:text-red-600 font-semibold py-2.5 rounded-xl transition-all text-sm disabled:opacity-50"
-        >
-          <PowerOff size={14} />
-          Deactivate Vendor
-        </button>
-      )}
-
-      {/* Inline confirmation */}
-      {confirming && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertTriangle size={16} />
-            <p className="text-sm font-semibold">Deactivate {vendor.name}?</p>
-          </div>
-          <p className="text-xs text-red-600">
-            This marks the vendor as inactive on-chain. They will no longer appear as active in the market.
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => { setConfirming(false); onDeactivate(); }}
-              disabled={loading}
-              className="flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <PowerOff size={14} />}
-              Yes, Deactivate
-            </button>
-            <button
-              onClick={() => setConfirming(false)}
-              className="flex items-center justify-center gap-1.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition-colors"
-            >
-              <X size={14} />
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -236,121 +290,156 @@ export function AdminMarket() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-gradient-to-br from-teal-600 to-teal-900 rounded-2xl p-8 text-white text-center shadow-lg">
-          <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
-            <ShieldCheck size={28} />
+      <div className="max-w-2xl mx-auto animate-page-in">
+        <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: '#0A3D38' }}>
+          <div className="absolute pointer-events-none" style={{ top: -60, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.3) 0%, transparent 65%)', filter: 'blur(50px)' }} />
+          <div className="relative p-10 text-center">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+              <ShieldCheck size={28} className="text-white" />
+            </div>
+            <h1 className="text-xl font-black text-white mb-2" style={{ fontFamily: "'Syne', sans-serif" }}>Admin Dashboard</h1>
+            <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.5)' }}>Connect admin wallet to manage vendors</p>
+            <button
+              onClick={connect}
+              className="font-black px-8 py-3 rounded-2xl active:scale-95 text-white"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', fontFamily: "'Syne', sans-serif" }}
+            >
+              Connect Wallet
+            </button>
           </div>
-          <h1 className="text-xl font-bold mb-1">Admin Dashboard</h1>
-          <p className="text-teal-200 text-sm mb-6">Connect your admin wallet to manage vendors</p>
-          <button onClick={connect}
-            className="bg-white text-teal-700 font-bold text-sm px-6 py-3 rounded-xl hover:bg-teal-50 transition-colors">
-            Connect Admin Wallet
-          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-4 animate-page-in">
 
-      {/* Header */}
-      <div className="bg-gradient-to-br from-teal-600 to-teal-900 rounded-2xl p-5 text-white shadow-md">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <ShieldCheck size={20} />
+      {/* Hero */}
+      <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: '#0A3D38' }}>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.04]" style={{ backgroundImage: `repeating-linear-gradient(45deg, white 0px, white 1px, transparent 1px, transparent 12px), repeating-linear-gradient(-45deg, white 0px, white 1px, transparent 1px, transparent 12px)` }} />
+        <div className="absolute pointer-events-none" style={{ top: -60, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.3) 0%, transparent 65%)', filter: 'blur(50px)' }} />
+
+        <div className="relative p-5">
+          {/* Row 1: title */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+              <ShieldCheck size={20} className="text-white" />
             </div>
-            <div>
-              <h1 className="text-base font-bold">Admin Dashboard</h1>
-              <p className="text-teal-300 text-xs font-mono">{truncateAddress(address ?? '')}</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-black text-white truncate" style={{ fontFamily: "'Syne', sans-serif" }}>Admin Dashboard</h1>
+              <p className="text-xs font-mono truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{truncateAddress(address ?? '')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Row 2: nav buttons */}
+          <div className="flex items-center gap-2 mb-5">
             <button
               onClick={() => navigate('/admin/metrics')}
-              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-2xl active:scale-95 transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
             >
               <BarChart2 size={13} /> Metrics
             </button>
             <button
               onClick={() => navigate('/admin/register')}
-              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-2xl active:scale-95 transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
             >
               <UserPlus size={13} /> Register
             </button>
           </div>
-        </div>
 
-        {/* Tab stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setTab('pending')}
-            className={`rounded-xl p-4 text-left transition-all ${tab === 'pending' ? 'bg-white/25 ring-2 ring-white/30' : 'bg-white/10 hover:bg-white/15'}`}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Clock size={15} className="text-amber-300" />
-              <span className="text-xs text-teal-200 font-semibold uppercase tracking-wide">Pending</span>
-            </div>
-            <p className="text-3xl font-bold">{loadingPending ? '…' : applications.length}</p>
-            {applications.length > 0
-              ? <p className="text-xs text-amber-300 mt-1 font-medium">⚠ Needs review</p>
-              : <p className="text-xs text-teal-400 mt-1">All clear</p>
-            }
-          </button>
-          <button
-            onClick={() => setTab('vendors')}
-            className={`rounded-xl p-4 text-left transition-all ${tab === 'vendors' ? 'bg-white/25 ring-2 ring-white/30' : 'bg-white/10 hover:bg-white/15'}`}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Users size={15} className="text-teal-200" />
-              <span className="text-xs text-teal-200 font-semibold uppercase tracking-wide">Vendors</span>
-            </div>
-            <p className="text-3xl font-bold">{loadingVendors ? '…' : activeVendors.length}</p>
-            <p className="text-xs text-teal-400 mt-1">active in market</p>
-          </button>
+          {/* Tab switcher */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setTab('pending')}
+              className="rounded-2xl p-4 text-left transition-all active:scale-95"
+              style={{
+                backgroundColor: tab === 'pending' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)',
+                border: tab === 'pending' ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Clock size={14} style={{ color: '#FCD34D' }} />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.5)' }}>Pending</span>
+              </div>
+              <p className="text-3xl font-black text-white" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {loadingPending ? '…' : applications.length}
+              </p>
+              {applications.length > 0
+                ? <p className="text-xs mt-1" style={{ color: '#FCD34D' }}>Needs review</p>
+                : <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>All clear</p>
+              }
+            </button>
+            <button
+              onClick={() => setTab('vendors')}
+              className="rounded-2xl p-4 text-left transition-all active:scale-95"
+              style={{
+                backgroundColor: tab === 'vendors' ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)',
+                border: tab === 'vendors' ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Users size={14} style={{ color: '#5EEAD4' }} />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.5)' }}>Vendors</span>
+              </div>
+              <p className="text-3xl font-black text-white" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {loadingVendors ? '…' : activeVendors.length}
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>active in market</p>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Error */}
       {(pendingError || vendorsError) && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700">
-          {pendingError && <p>Pending error: {pendingError}</p>}
-          {vendorsError && <p>Vendors error: {vendorsError}</p>}
+        <div className="rounded-2xl p-4 flex items-center gap-3" style={{ backgroundColor: '#FFF1F2', border: '1.5px solid #FECDD3' }}>
+          <AlertTriangle size={16} style={{ color: '#F43F5E' }} />
+          <div>
+            {pendingError && <p className="text-sm font-semibold" style={{ color: '#F43F5E' }}>Pending: {pendingError}</p>}
+            {vendorsError && <p className="text-sm font-semibold" style={{ color: '#F43F5E' }}>Vendors: {vendorsError}</p>}
+          </div>
         </div>
       )}
 
       {/* ── Tab: Pending ── */}
       {tab === 'pending' && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-800">Pending Applications</h2>
+              <h2 className="text-sm font-black text-slate-800" style={{ fontFamily: "'Syne', sans-serif" }}>Pending Applications</h2>
               {applications.length > 0 && (
-                <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                <span
+                  className="text-xs font-black px-2.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: '#FFFBEB', color: '#D97706' }}
+                >
                   {applications.length} new
                 </span>
               )}
             </div>
-            <button onClick={refetchPending} className="text-slate-400 hover:text-teal-600 transition-colors">
-              <RefreshCw size={15} />
+            <button
+              onClick={refetchPending}
+              className="w-8 h-8 rounded-xl flex items-center justify-center active:scale-95 transition-all"
+              style={{ backgroundColor: '#F8FAFC' }}
+            >
+              <RefreshCw size={13} style={{ color: '#94A3B8' }} />
             </button>
           </div>
 
           {loadingPending && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={28} className="animate-spin text-teal-500" />
+              <Loader2 size={28} className="animate-spin" style={{ color: '#0F766E' }} />
             </div>
           )}
 
           {!loadingPending && applications.length === 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Clock size={28} className="text-slate-300" />
+            <div className="rounded-3xl p-10 text-center" style={{ border: '1.5px solid #F1F5F9' }}>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#F8FAFC' }}>
+                <Clock size={24} style={{ color: '#CBD5E1' }} />
               </div>
-              <p className="text-base font-semibold text-slate-600">No pending applications</p>
-              <p className="text-sm text-slate-400 mt-1">New vendor applications will appear here for review</p>
+              <p className="text-sm font-bold text-slate-500">No pending applications</p>
+              <p className="text-xs text-slate-400 mt-1">New vendor applications will appear here for review</p>
             </div>
           )}
 
@@ -369,26 +458,30 @@ export function AdminMarket() {
       {/* ── Tab: Vendors ── */}
       {tab === 'vendors' && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-800">Registered Vendors</h2>
-            <button onClick={refetchVendors} className="text-slate-400 hover:text-teal-600 transition-colors">
-              <RefreshCw size={15} />
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-black text-slate-800" style={{ fontFamily: "'Syne', sans-serif" }}>Registered Vendors</h2>
+            <button
+              onClick={refetchVendors}
+              className="w-8 h-8 rounded-xl flex items-center justify-center active:scale-95 transition-all"
+              style={{ backgroundColor: '#F8FAFC' }}
+            >
+              <RefreshCw size={13} style={{ color: '#94A3B8' }} />
             </button>
           </div>
 
           {loadingVendors && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 size={28} className="animate-spin text-teal-500" />
+              <Loader2 size={28} className="animate-spin" style={{ color: '#0F766E' }} />
             </div>
           )}
 
           {!loadingVendors && vendors.length === 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <Users size={28} className="text-slate-300" />
+            <div className="rounded-3xl p-10 text-center" style={{ border: '1.5px solid #F1F5F9' }}>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#F8FAFC' }}>
+                <Users size={24} style={{ color: '#CBD5E1' }} />
               </div>
-              <p className="text-base font-semibold text-slate-600">No vendors registered yet</p>
-              <p className="text-sm text-slate-400 mt-1">Approve applications to add vendors to the market</p>
+              <p className="text-sm font-bold text-slate-500">No vendors registered yet</p>
+              <p className="text-xs text-slate-400 mt-1">Approve applications to add vendors to the market</p>
             </div>
           )}
 

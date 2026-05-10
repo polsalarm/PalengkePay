@@ -1,50 +1,68 @@
 import { useState } from 'react';
-import { CheckCircle, Loader2, Send } from 'lucide-react';
+import { CheckCircle, Loader2, QrCode, ExternalLink, MapPin, Phone, Tag, Wallet } from 'lucide-react';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useApplyVendor } from '../../lib/hooks/useVendor';
 import { useToast } from '../../components/Toast';
+import { truncateAddress } from '../../lib/stellar';
 
 const PRODUCT_TYPES = ['fish', 'meat', 'vegetables', 'fruits', 'rice & grains', 'spices', 'other'];
 
-// Hardcoded occupied stalls — reflects current market usage
+const PRODUCT_META: Record<string, { emoji: string; color: string; bg: string }> = {
+  fish:           { emoji: '🐟', color: '#2563EB', bg: '#EFF6FF' },
+  meat:           { emoji: '🥩', color: '#DC2626', bg: '#FEF2F2' },
+  vegetables:     { emoji: '🥦', color: '#16A34A', bg: '#F0FDF4' },
+  fruits:         { emoji: '🍎', color: '#EA580C', bg: '#FFF7ED' },
+  'rice & grains':{ emoji: '🌾', color: '#CA8A04', bg: '#FEFCE8' },
+  spices:         { emoji: '🌶️', color: '#DB2777', bg: '#FDF2F8' },
+  other:          { emoji: '🛒', color: '#475569', bg: '#F8FAFC' },
+};
+
 const OCCUPIED_STALLS = new Set([
-  'A-1', 'A-3', 'A-5', 'A-8', 'A-10', 'A-13', 'A-16', 'A-19',
-  'B-2', 'B-4', 'B-6', 'B-9', 'B-11', 'B-14', 'B-17', 'B-18',
-  'C-1', 'C-4', 'C-7', 'C-10', 'C-15', 'C-18', 'C-20',
-  'D-3', 'D-5', 'D-8', 'D-11', 'D-13', 'D-16', 'D-17', 'D-19',
+  'A-1','A-3','A-5','A-8','A-10','A-13','A-16','A-19',
+  'B-2','B-4','B-6','B-9','B-11','B-14','B-17','B-18',
+  'C-1','C-4','C-7','C-10','C-15','C-18','C-20',
+  'D-3','D-5','D-8','D-11','D-13','D-16','D-17','D-19',
 ]);
 
 const SECTIONS = ['A', 'B', 'C', 'D'];
 const STALLS_PER_SECTION = 20;
 
-function StallPicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (stall: string) => void;
-}) {
+const SECTION_COLORS: Record<string, { active: string; text: string; ring: string }> = {
+  A: { active: '#0F766E', text: 'white',   ring: '#14B8A6' },
+  B: { active: '#D97706', text: 'white',   ring: '#FCD34D' },
+  C: { active: '#7C3AED', text: 'white',   ring: '#C4B5FD' },
+  D: { active: '#DB2777', text: 'white',   ring: '#FBCFE8' },
+};
+
+function StallPicker({ value, onChange }: { value: string; onChange: (s: string) => void }) {
   const [section, setSection] = useState('A');
+  const sc = SECTION_COLORS[section];
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-1.5">
-        {SECTIONS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setSection(s)}
-            className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors ${
-              section === s
-                ? 'bg-teal-700 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Section {s}
-          </button>
-        ))}
+    <div className="space-y-3">
+      {/* Section tabs */}
+      <div className="grid grid-cols-4 gap-1.5 p-1 rounded-2xl" style={{ backgroundColor: '#F1F5F9' }}>
+        {SECTIONS.map((s) => {
+          const active = section === s;
+          const c = SECTION_COLORS[s];
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSection(s)}
+              className="py-2 text-xs font-black rounded-xl transition-all active:scale-95"
+              style={active
+                ? { backgroundColor: c.active, color: c.text, boxShadow: `0 2px 8px ${c.ring}66` }
+                : { color: '#94A3B8' }
+              }
+            >
+              Section {s}
+            </button>
+          );
+        })}
       </div>
 
+      {/* Stall grid */}
       <div className="grid grid-cols-5 gap-1.5">
         {Array.from({ length: STALLS_PER_SECTION }, (_, i) => {
           const stallId = `${section}-${i + 1}`;
@@ -56,13 +74,22 @@ function StallPicker({
               type="button"
               disabled={occupied}
               onClick={() => onChange(selected ? '' : stallId)}
-              className={`py-2 text-xs font-semibold rounded-lg transition-all ${
+              className="py-2.5 text-xs font-black rounded-xl transition-all active:scale-95"
+              style={
                 occupied
-                  ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                  ? { backgroundColor: '#F1F5F9', color: '#CBD5E1', cursor: 'not-allowed' }
                   : selected
-                  ? 'bg-teal-700 text-white ring-2 ring-teal-400 ring-offset-1'
-                  : 'bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100'
-              }`}
+                  ? {
+                      backgroundColor: sc.active,
+                      color: sc.text,
+                      boxShadow: `0 0 0 2px white, 0 0 0 4px ${sc.ring}`,
+                    }
+                  : {
+                      backgroundColor: '#F8FAFC',
+                      color: '#64748B',
+                      border: '1.5px solid #E2E8F0',
+                    }
+              }
             >
               {i + 1}
             </button>
@@ -70,25 +97,29 @@ function StallPicker({
         })}
       </div>
 
-      <div className="flex items-center gap-4 pt-1">
-        <span className="flex items-center gap-1.5 text-xs text-slate-500">
-          <span className="w-3 h-3 rounded bg-teal-50 border border-teal-200 inline-block" />
-          Available
-        </span>
-        <span className="flex items-center gap-1.5 text-xs text-slate-500">
-          <span className="w-3 h-3 rounded bg-slate-100 inline-block" />
-          Occupied
-        </span>
-        <span className="flex items-center gap-1.5 text-xs text-slate-500">
-          <span className="w-3 h-3 rounded bg-teal-700 inline-block" />
-          Selected
-        </span>
+      {/* Legend */}
+      <div className="flex items-center gap-4">
+        {[
+          { swatch: { backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0' }, label: 'Available' },
+          { swatch: { backgroundColor: '#F1F5F9' }, label: 'Occupied' },
+          { swatch: { backgroundColor: sc.active }, label: 'Selected' },
+        ].map(({ swatch, label }) => (
+          <span key={label} className="flex items-center gap-1.5 text-xs text-slate-400">
+            <span className="w-3 h-3 rounded shrink-0" style={swatch} />
+            {label}
+          </span>
+        ))}
       </div>
 
+      {/* Selected badge */}
       {value && (
-        <p className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg px-3 py-1.5 text-center">
-          Selected: Stall {value}
-        </p>
+        <div
+          className="flex items-center justify-center gap-2 py-2.5 rounded-2xl text-sm font-black"
+          style={{ backgroundColor: sc.active, color: sc.text }}
+        >
+          <MapPin size={14} />
+          Stall {value} selected
+        </div>
       )}
     </div>
   );
@@ -99,12 +130,7 @@ export function VendorApply() {
   const { apply, isSubmitting, error, txHash } = useApplyVendor();
   const { showToast } = useToast();
   const [done, setDone] = useState(false);
-  const [form, setForm] = useState({
-    name: '',
-    stallNumber: '',
-    productType: 'fish',
-    phone: '',
-  });
+  const [form, setForm] = useState({ name: '', stallNumber: '', productType: 'fish', phone: '' });
 
   const update = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -115,7 +141,6 @@ export function VendorApply() {
     if (!isConnected) { connect(); return; }
     if (!address) return;
     if (!form.stallNumber) { showToast('Select a stall number first.', 'error'); return; }
-
     const ok = await apply(address, form.name, form.stallNumber, form.phone, form.productType);
     if (ok) {
       showToast('Application submitted! Waiting for admin approval.', 'success');
@@ -125,112 +150,260 @@ export function VendorApply() {
     }
   };
 
+  const meta = PRODUCT_META[form.productType] ?? PRODUCT_META.other;
+
+  /* ── Success state ── */
   if (done) {
     return (
-      <div className="max-w-md mx-auto">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={28} className="text-teal-600" />
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Application Submitted!</h2>
-          <p className="text-sm text-slate-500 mb-4">
-            Your application is pending admin review. You'll be registered once approved.
-          </p>
-          {txHash && (
-            <a
-              href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-teal-600 hover:underline block mb-6"
+      <div className="max-w-md mx-auto animate-page-in">
+        <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #F1F5F9' }}>
+          <div
+            className="p-8 text-center relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #0A3D38 0%, #0F766E 100%)' }}
+          >
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                top: -60, right: -40, width: 200, height: 200, borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(20,184,166,0.3) 0%, transparent 65%)',
+                filter: 'blur(40px)',
+              }}
+            />
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 relative"
+              style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
             >
-              View on Stellar Expert →
-            </a>
-          )}
-          <div className="bg-slate-50 rounded-lg p-4 text-left space-y-1">
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-2">Your Details</p>
-            <p className="text-sm text-slate-700"><span className="font-medium">Name:</span> {form.name}</p>
-            <p className="text-sm text-slate-700"><span className="font-medium">Stall:</span> {form.stallNumber}</p>
-            <p className="text-sm text-slate-700"><span className="font-medium">Type:</span> {form.productType}</p>
+              <CheckCircle size={40} className="text-white" />
+            </div>
+            <h2
+              className="text-xl font-black text-white mb-1"
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
+              Application Submitted!
+            </h2>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              Admin will review and approve your registration.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 space-y-3">
+            {/* Details card */}
+            <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: '#F8FAFC' }}>
+              <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#94A3B8' }}>
+                Your Details
+              </p>
+              {[
+                { icon: QrCode,  label: 'Stall Name',  value: form.name },
+                { icon: MapPin,  label: 'Stall',       value: form.stallNumber },
+                { icon: Tag,     label: 'Product',     value: `${meta.emoji} ${form.productType}` },
+                ...(form.phone ? [{ icon: Phone, label: 'Phone', value: form.phone }] : []),
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: '#F0FDFA' }}
+                  >
+                    <Icon size={13} style={{ color: '#0F766E' }} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">{label}</p>
+                    <p className="text-sm font-bold text-slate-800 capitalize">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {txHash && (
+              <a
+                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-xl w-full active:scale-95"
+                style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
+              >
+                <ExternalLink size={13} /> View on Stellar Expert
+              </a>
+            )}
           </div>
         </div>
       </div>
     );
   }
 
+  /* ── Application form ── */
   return (
-    <div className="max-w-md mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Apply as Vendor</h1>
-        <p className="text-sm text-slate-500">Submit your stall info. Admin will approve your registration.</p>
+    <div className="max-w-md mx-auto space-y-4 animate-page-in">
+
+      {/* ── Hero ── */}
+      <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: '#0A3D38' }}>
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage: `repeating-linear-gradient(45deg, white 0px, white 1px, transparent 1px, transparent 12px),
+              repeating-linear-gradient(-45deg, white 0px, white 1px, transparent 1px, transparent 12px)`,
+          }}
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: -50, right: -30, width: 200, height: 200, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(20,184,166,0.3) 0%, transparent 65%)',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div className="relative p-5">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+            style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+          >
+            <QrCode size={22} className="text-white" />
+          </div>
+          <h1
+            className="text-xl font-black text-white mb-1"
+            style={{ fontFamily: "'Syne', sans-serif" }}
+          >
+            Apply as Vendor
+          </h1>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            I-submit ang stall info. Admin ang mag-approve ng registration mo.
+          </p>
+
+          {/* Wallet status */}
+          <div
+            className="mt-4 pt-4 flex items-center gap-2"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <Wallet size={13} style={{ color: isConnected ? '#4ADE80' : 'rgba(255,255,255,0.3)' }} />
+            {isConnected && address ? (
+              <span className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                {truncateAddress(address)}
+              </span>
+            ) : (
+              <button
+                onClick={connect}
+                className="text-xs font-bold px-3 py-1 rounded-full"
+                style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+              >
+                Connect Wallet
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {!isConnected && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-sm text-amber-700 mb-2">Connect your Stellar wallet to apply.</p>
-          <button
-            onClick={connect}
-            className="text-sm font-medium bg-teal-700 text-white px-4 py-2 rounded-lg"
-          >
-            Connect Wallet
-          </button>
-        </div>
-      )}
+      {/* ── Form ── */}
+      <form onSubmit={handleSubmit} className="space-y-4">
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+        {/* Stall name */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">Your Name / Stall Name</label>
+          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+            Pangalan ng Stall
+          </label>
           <input
             type="text" required value={form.name} onChange={update('name')}
-            placeholder="e.g. Aling Nena"
-            className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder:text-slate-300"
+            placeholder="e.g. Aling Nena Sari-Sari"
+            className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-slate-800 focus:outline-none transition-all placeholder:font-normal placeholder:text-slate-300"
+            style={{ border: '2px solid #E2E8F0' }}
+            onFocus={(e) => { e.target.style.borderColor = '#0F766E'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#E2E8F0'; }}
           />
         </div>
 
+        {/* Product type */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">Stall Number</label>
-          <StallPicker
-            value={form.stallNumber}
-            onChange={(stall) => setForm((prev) => ({ ...prev, stallNumber: stall }))}
-          />
+          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+            Uri ng Produkto
+          </label>
+          <div className="relative">
+            <select
+              value={form.productType} onChange={update('productType')}
+              className="w-full rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:outline-none transition-all bg-white appearance-none pr-10"
+              style={{ border: '2px solid #E2E8F0' }}
+              onFocus={(e) => { e.target.style.borderColor = '#0F766E'; }}
+              onBlur={(e) => { e.target.style.borderColor = '#E2E8F0'; }}
+            >
+              {PRODUCT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {PRODUCT_META[t]?.emoji ?? ''} {t}
+                </option>
+              ))}
+            </select>
+            {/* Selected preview badge */}
+            <div
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none"
+            >
+              {meta.emoji}
+            </div>
+          </div>
         </div>
 
+        {/* Stall picker */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">Product Type</label>
-          <select
-            value={form.productType} onChange={update('productType')}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+            Piliin ang Stall
+          </label>
+          <div
+            className="rounded-3xl p-4"
+            style={{ border: '1.5px solid #F1F5F9', backgroundColor: 'white' }}
           >
-            {PRODUCT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+            <StallPicker
+              value={form.stallNumber}
+              onChange={(stall) => setForm((prev) => ({ ...prev, stallNumber: stall }))}
+            />
+          </div>
         </div>
 
+        {/* Phone */}
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-            Phone <span className="font-normal text-slate-400">(optional)</span>
+          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+            Telepono <span className="font-normal normal-case text-slate-400">(optional)</span>
           </label>
           <input
             type="tel" value={form.phone} onChange={update('phone')}
-            placeholder="+63917..."
-            className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder:text-slate-300"
+            placeholder="+63917 XXX XXXX"
+            className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-slate-800 focus:outline-none transition-all placeholder:font-normal placeholder:text-slate-300"
+            style={{ border: '2px solid #E2E8F0' }}
+            onFocus={(e) => { e.target.style.borderColor = '#0F766E'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#E2E8F0'; }}
           />
         </div>
 
+        {/* Wallet address display */}
         {isConnected && address && (
-          <div className="bg-slate-50 rounded-lg px-3 py-2.5">
-            <p className="text-xs text-slate-400 mb-0.5">Your wallet (will be your payment address)</p>
-            <p className="text-xs font-mono text-slate-600 break-all">{address}</p>
+          <div
+            className="rounded-2xl px-4 py-3 flex items-center gap-3"
+            style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #F1F5F9' }}
+          >
+            <Wallet size={14} style={{ color: '#0F766E' }} className="shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-slate-400 mb-0.5">Payment wallet</p>
+              <p className="text-xs font-mono text-slate-600 truncate">{address}</p>
+            </div>
           </div>
         )}
 
+        {/* Submit */}
         <button
           type="submit"
           disabled={isSubmitting || !isConnected}
-          className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-60"
+          className="w-full text-white font-black rounded-2xl active:scale-95 transition-all disabled:opacity-40"
+          style={{
+            backgroundColor: '#0F766E',
+            minHeight: '60px',
+            fontSize: '1.05rem',
+            fontFamily: "'Syne', sans-serif",
+            boxShadow: '0 6px 24px rgba(15,118,110,0.35)',
+          }}
         >
-          {isSubmitting
-            ? <><Loader2 size={16} className="animate-spin" /> Submitting…</>
-            : <><Send size={16} /> Submit Application</>
-          }
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 size={18} className="animate-spin" /> Isinusumite…
+            </span>
+          ) : !isConnected ? (
+            'I-connect ang Wallet'
+          ) : (
+            'I-submit ang Application'
+          )}
         </button>
       </form>
     </div>

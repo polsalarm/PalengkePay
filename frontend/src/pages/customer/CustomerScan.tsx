@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, Loader2, X, ExternalLink, AlertTriangle, Store, RotateCcw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, CheckCircle, Loader2, X, ExternalLink, AlertTriangle, Store, RotateCcw, ScanLine, Home, List, HandCoins, Store as StoreIcon } from 'lucide-react';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { QRScanner } from '../../components/QRScanner';
 import type { QRScanMeta } from '../../components/QRScanner';
 import { PaymentForm } from '../../components/PaymentForm';
@@ -50,12 +50,10 @@ export function CustomerScan() {
   const { status, txHash, error, sendPayment, reset } = usePayment();
   const { createUtang, isCreating } = useCreateUtang();
 
-  // Advance to done when payment confirms
   useEffect(() => {
     if (step === 'confirm' && status === 'confirmed') setStep('done');
   }, [step, status]);
 
-  // ── QR raw intercept: detect utang offer before payment parsing ──
   const handleRawScan = (raw: string): boolean => {
     try {
       const parsed = JSON.parse(raw) as UtangOfferPayload;
@@ -87,14 +85,12 @@ export function CustomerScan() {
     }
   };
 
-  // PaymentForm submit → go to confirm step (don't sign yet)
   const handlePay = (amount: string, memo: string) => {
     setPendingPayment({ amount, memo });
     reset();
     setStep('confirm');
   };
 
-  // Confirm screen → actually sign
   const handleConfirm = async () => {
     if (!address || !pendingPayment) return;
     await sendPayment(address, vendorAddress, pendingPayment.amount, pendingPayment.memo);
@@ -147,54 +143,169 @@ export function CustomerScan() {
 
   if (!isConnected) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-xl font-bold text-slate-900">Scan QR</h1>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-sm text-amber-700 mb-3">Connect wallet to scan and pay.</p>
-          <button onClick={connect} className="text-sm font-medium bg-teal-700 text-white px-4 py-2 rounded-lg">
-            Connect Wallet
-          </button>
+      <div
+        className="min-h-[60vh] flex flex-col items-center justify-center px-6 animate-page-in"
+        style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+      >
+        <div
+          className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
+          style={{ backgroundColor: '#F0FDFA', border: '2px solid #CCFBF1' }}
+        >
+          <ScanLine size={36} style={{ color: '#0F766E' }} />
         </div>
+        <h2
+          className="text-xl font-black text-slate-900 mb-2 text-center"
+          style={{ fontFamily: "'Syne', sans-serif" }}
+        >
+          Connect your wallet
+        </h2>
+        <p className="text-sm text-slate-500 text-center mb-6">
+          Kailangan ng wallet para mag-scan at magbayad.
+        </p>
+        <button
+          onClick={connect}
+          className="w-full text-white font-bold py-4 rounded-2xl active:scale-95 transition-all text-base"
+          style={{ backgroundColor: '#0F766E', maxWidth: '320px' }}
+        >
+          I-connect ang Wallet
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 max-w-md mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => {
-            if (step === 'scan') navigate('/customer/home');
-            else if (step === 'done' || step === 'utang_done') navigate('/customer/home');
-            else backToScan();
-          }}
-          className="text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-bold text-slate-900">{stepTitle[step]}</h1>
-      </div>
-
-      {/* ── Step: scan ─────────────────────────────────── */}
-      {step === 'scan' && (
-        <>
-          <p className="text-xs text-slate-500 text-center -mt-2">
-            Scans payment QRs and utang offer QRs automatically
-          </p>
-          <QRScanner
-            onScan={handlePaymentScan}
-            onRawScan={handleRawScan}
-            onManualEntry={() => setStep('manual')}
-          />
-        </>
+    <div
+      className="animate-page-in"
+      style={{ paddingBottom: step === 'scan' ? 0 : 'calc(80px + env(safe-area-inset-bottom))' }}
+    >
+      {/* ── Header ── */}
+      {step !== 'scan' && (
+        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+          <button
+            onClick={() => {
+              if (step === 'scan') navigate('/customer/home');
+              else if (step === 'done' || step === 'utang_done') navigate('/customer/home');
+              else backToScan();
+            }}
+            className="w-10 h-10 rounded-2xl flex items-center justify-center transition-colors active:scale-95"
+            style={{ backgroundColor: '#F1F5F9' }}
+          >
+            <ArrowLeft size={18} style={{ color: '#475569' }} />
+          </button>
+          <h1
+            className="text-lg font-black text-slate-900"
+            style={{ fontFamily: "'Syne', sans-serif" }}
+          >
+            {stepTitle[step]}
+          </h1>
+        </div>
       )}
 
-      {/* ── Step: manual address ───────────────────────── */}
+      {/* ── Step: scan ── */}
+      {step === 'scan' && (
+        <div
+          className="flex flex-col"
+          style={{
+            backgroundColor: '#0A3D38',
+            minHeight: '100dvh',
+          }}
+        >
+          {/* Banig texture */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.04]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg, white 0px, white 1px, transparent 1px, transparent 12px
+              ), repeating-linear-gradient(
+                -45deg, white 0px, white 1px, transparent 1px, transparent 12px
+              )`,
+            }}
+          />
+          {/* Ambient glow */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: -80, left: '50%', transform: 'translateX(-50%)',
+              width: 320, height: 320, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(20,184,166,0.25) 0%, transparent 65%)',
+              filter: 'blur(60px)',
+            }}
+          />
+
+          {/* Header */}
+          <div className="relative px-4 pt-4 pb-4 flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => navigate('/customer/home')}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 shrink-0"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+            >
+              <ArrowLeft size={18} style={{ color: 'rgba(255,255,255,0.8)' }} />
+            </button>
+            <div>
+              <h1 className="text-base font-black text-white leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                I-Scan ang QR
+              </h1>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Payment QR at utang offer — auto-detect
+              </p>
+            </div>
+          </div>
+
+          {/* Scanner */}
+          <div className="relative flex-1">
+            <QRScanner
+              onScan={handlePaymentScan}
+              onRawScan={handleRawScan}
+              onManualEntry={() => setStep('manual')}
+            />
+          </div>
+
+          {/* Bottom nav */}
+          <nav
+            className="shrink-0 bg-white border-t border-slate-200"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            <div className="flex h-16 items-center">
+              {[
+                { to: '/customer/home', icon: Home, label: 'Home' },
+                { to: '/customer/history', icon: List, label: 'History' },
+                { to: '/customer/scan', icon: ScanLine, label: 'Scan', center: true },
+                { to: '/customer/utang', icon: HandCoins, label: 'Utang' },
+                { to: '/market', icon: StoreIcon, label: 'Market' },
+              ].map(({ to, icon: Icon, label, center }) => {
+                if (center) {
+                  return (
+                    <div key={to} className="flex-1 flex flex-col items-center justify-center overflow-visible">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg -translate-y-5 border-4 border-white bg-teal-600">
+                        <Icon size={22} className="text-white" />
+                      </div>
+                      <span className="text-xs font-medium -mt-3.5 text-teal-700">{label}</span>
+                    </div>
+                  );
+                }
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) =>
+                      `flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-w-0 ${isActive ? 'text-teal-700' : 'text-slate-400'}`
+                    }
+                  >
+                    <Icon size={18} />
+                    <span className="text-xs font-medium leading-tight">{label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </nav>
+        </div>
+      )}
+
+      {/* ── Step: manual address ── */}
       {step === 'manual' && (
-        <form onSubmit={handleManualSubmit} className="space-y-4">
+        <form onSubmit={handleManualSubmit} className="px-4 pt-2 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+            <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">
               Vendor Wallet Address
             </label>
             <input
@@ -202,231 +313,399 @@ export function CustomerScan() {
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
               placeholder="G..."
-              className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder:text-slate-300"
+              className="w-full rounded-2xl px-4 font-mono text-sm focus:outline-none focus:ring-2"
+              style={{
+                border: '2px solid #E2E8F0',
+                padding: '14px 16px',
+                fontSize: '0.875rem',
+              }}
               autoFocus
             />
+            <p className="text-xs text-slate-400 mt-1.5 px-1">
+              56-character Stellar address starting with G
+            </p>
           </div>
           <button
             type="submit"
-            className="w-full bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-lg transition-colors"
+            className="w-full text-white font-bold rounded-2xl active:scale-95 transition-all"
+            style={{ backgroundColor: '#0F766E', minHeight: '56px', fontSize: '1rem' }}
           >
-            Continue
+            Ituloy
           </button>
         </form>
       )}
 
-      {/* ── Step: payment form ─────────────────────────── */}
+      {/* ── Step: payment form ── */}
       {step === 'pay' && (
-        <PaymentForm
-          vendorAddress={vendorAddress}
-          vendor={vendor}
-          isLoading={vendorLoading}
-          preloadedVendorName={scannedMeta?.name}
-          preloadedStallInfo={scannedMeta?.stallInfo}
-          onSubmit={handlePay}
-          disabled={false}
-        />
+        <div className="px-4 pt-2">
+          <PaymentForm
+            vendorAddress={vendorAddress}
+            vendor={vendor}
+            isLoading={vendorLoading}
+            preloadedVendorName={scannedMeta?.name}
+            preloadedStallInfo={scannedMeta?.stallInfo}
+            onSubmit={handlePay}
+            disabled={false}
+          />
+        </div>
       )}
 
-      {/* ── Step: confirm ──────────────────────────────── */}
+      {/* ── Step: confirm ── */}
       {step === 'confirm' && pendingPayment && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-slate-100">
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Review before signing</p>
-          </div>
-          <div className="p-5 space-y-4">
-            {/* Vendor info */}
-            <div className="flex items-center gap-3 bg-teal-50 border border-teal-100 rounded-xl p-4">
-              <div className="w-10 h-10 rounded-full bg-teal-700 flex items-center justify-center shrink-0">
-                <Store size={16} className="text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-teal-600 font-medium">Paying</p>
-                <p className="text-sm font-bold text-slate-900 truncate">{vendorDisplay}</p>
-              </div>
+        <div className="px-4 pt-2 space-y-3">
+          {/* Vendor card */}
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ backgroundColor: '#F0FDFA', border: '2px solid #CCFBF1' }}
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: '#0F766E' }}
+            >
+              <Store size={20} className="text-white" />
             </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: '#0F766E' }}>
+                Nagbabayad kay
+              </p>
+              <p className="text-base font-black text-slate-900 truncate" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {vendorDisplay}
+              </p>
+            </div>
+          </div>
 
-            {/* Amount + memo */}
-            <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500">Amount</span>
-                <span className="text-xl font-black text-teal-700">{pendingPayment.amount} XLM</span>
+          {/* Amount — large and confident */}
+          <div
+            className="rounded-3xl p-6 text-center"
+            style={{ backgroundColor: '#0A3D38' }}
+          >
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Halagang Babayaran
+            </p>
+            <p
+              className="font-black text-white leading-none mb-1"
+              style={{
+                fontSize: pendingPayment.amount.length > 8 ? '2.2rem' : '3rem',
+                fontFamily: "'Syne', sans-serif",
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {pendingPayment.amount}
+            </p>
+            <p className="text-base font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>XLM</p>
+            {pendingPayment.memo && (
+              <div
+                className="mt-4 pt-4 text-sm font-semibold"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
+              >
+                "{pendingPayment.memo}"
               </div>
-              {pendingPayment.memo && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-500">Memo</span>
-                  <span className="text-sm font-semibold text-slate-800">{pendingPayment.memo}</span>
-                </div>
+            )}
+          </div>
+
+          {/* Gasless badge */}
+          <div
+            className="flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold"
+            style={{ backgroundColor: '#F0FDF4', color: '#16A34A' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22C55E' }} />
+            Gasless — fees sponsored, zero cost sa iyo
+          </div>
+
+          {status === 'idle' && (
+            <button
+              onClick={handleConfirm}
+              className="w-full text-white font-black rounded-2xl active:scale-95 transition-all"
+              style={{
+                backgroundColor: '#0F766E',
+                minHeight: '60px',
+                fontSize: '1.05rem',
+                fontFamily: "'Syne', sans-serif",
+                boxShadow: '0 6px 24px rgba(15,118,110,0.4)',
+              }}
+            >
+              Kumpirmahin at I-sign
+            </button>
+          )}
+
+          {status !== 'idle' && status !== 'confirmed' && (
+            <TxStatusTracker
+              status={status}
+              txHash={txHash}
+              error={error}
+              amount={pendingPayment.amount}
+              recipientName={vendorDisplay}
+              onRetry={() => { reset(); }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── Step: payment done ── */}
+      {step === 'done' && (
+        <div className="px-4 pt-2">
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{ border: '1.5px solid #F1F5F9' }}
+          >
+            {/* Green success header */}
+            <div
+              className="p-8 text-center"
+              style={{ background: 'linear-gradient(135deg, #0A3D38 0%, #0F766E 100%)' }}
+            >
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <CheckCircle size={40} className="text-white" />
+              </div>
+              <h2
+                className="text-xl font-black text-white mb-1"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                Bayad na!
+              </h2>
+              {pendingPayment && (
+                <p
+                  className="font-black text-white leading-none mt-3"
+                  style={{ fontSize: '2.5rem', fontFamily: "'Syne', sans-serif" }}
+                >
+                  {pendingPayment.amount}
+                  <span className="text-lg font-bold ml-2" style={{ color: 'rgba(255,255,255,0.5)' }}>XLM</span>
+                </p>
+              )}
+              {vendorDisplay && (
+                <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  kay {vendorDisplay}
+                </p>
               )}
             </div>
 
-            {status === 'idle' && (
-              <button
-                onClick={handleConfirm}
-                className="w-full bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-4 rounded-xl transition-all text-base"
-              >
-                Confirm &amp; Sign
-              </button>
-            )}
-
-            {status !== 'idle' && status !== 'confirmed' && (
-              <TxStatusTracker
-                status={status}
-                txHash={txHash}
-                error={error}
-                amount={pendingPayment.amount}
-                recipientName={vendorDisplay}
-                onRetry={() => { reset(); }}
-              />
-            )}
+            {/* Actions */}
+            <div className="bg-white p-5 space-y-3">
+              {txHash && (
+                <a
+                  href={stellarExpertUrl(txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-xl w-full transition-colors active:scale-95"
+                  style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
+                >
+                  <ExternalLink size={13} /> Tingnan sa Stellar Expert
+                </a>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={backToScan}
+                  className="flex items-center justify-center gap-2 font-bold rounded-2xl active:scale-95 transition-all text-sm"
+                  style={{
+                    minHeight: '52px',
+                    border: '2px solid #E2E8F0',
+                    color: '#475569',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  <RotateCcw size={14} /> Bayad Ulit
+                </button>
+                <button
+                  onClick={() => navigate('/customer/home')}
+                  className="font-bold rounded-2xl active:scale-95 transition-all text-sm text-white"
+                  style={{ minHeight: '52px', backgroundColor: '#0F766E' }}
+                >
+                  Home
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Step: payment done ─────────────────────────── */}
-      {step === 'done' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
-          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={28} className="text-green-600" />
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Payment sent!</h2>
-          {vendorDisplay && (
-            <p className="text-sm text-slate-500 mb-1">to {vendorDisplay}</p>
-          )}
-          {pendingPayment && (
-            <p className="text-xl font-black text-teal-700 mb-4">{pendingPayment.amount} XLM</p>
-          )}
-          {txHash && (
-            <a
-              href={stellarExpertUrl(txHash)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-teal-700 underline underline-offset-2 mb-6"
-            >
-              View receipt on Stellar Expert <ExternalLink size={12} />
-            </a>
-          )}
-          <div className="grid grid-cols-2 gap-3">
+      {/* ── Step: utang offer ── */}
+      {step === 'utang_offer' && utangOffer && (
+        <div className="px-4 pt-2 space-y-3">
+          {/* Offer header */}
+          <div
+            className="rounded-2xl p-4 flex items-center justify-between"
+            style={{ backgroundColor: '#FFFBEB', border: '2px solid #FDE68A' }}
+          >
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#D97706' }}>
+                Installment Credit Offer
+              </p>
+              <p className="text-sm font-black text-slate-800 mt-0.5" style={{ fontFamily: "'Syne', sans-serif" }}>
+                Suriin bago tanggapin
+              </p>
+            </div>
             <button
               onClick={backToScan}
-              className="flex items-center justify-center gap-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-3 rounded-xl text-sm transition-colors"
+              className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95"
+              style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
             >
-              <RotateCcw size={14} /> Pay Again
-            </button>
-            <button
-              onClick={() => navigate('/customer/home')}
-              className="bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
-            >
-              Home
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step: utang offer ──────────────────────────── */}
-      {step === 'utang_offer' && utangOffer && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between">
-            <p className="text-xs text-teal-600 font-semibold uppercase tracking-wide">Installment Credit Offer</p>
-            <button onClick={backToScan} className="text-slate-400 hover:text-slate-600">
-              <X size={18} />
+              <X size={16} style={{ color: '#64748B' }} />
             </button>
           </div>
 
-          <div className="p-5 space-y-4">
-            <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-              {utangOffer.d && (
-                <div>
-                  <p className="text-xs text-slate-500 mb-0.5">Items</p>
-                  <p className="text-sm font-semibold text-slate-800">{utangOffer.d}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-white rounded-lg p-2 border border-slate-200">
-                  <p className="text-base font-bold text-slate-900">{(utangOffer.a / STROOPS).toFixed(2)}</p>
-                  <p className="text-xs text-slate-400">XLM total</p>
-                </div>
-                <div className="bg-white rounded-lg p-2 border border-slate-200">
-                  <p className="text-base font-bold text-slate-900">{utangOffer.n}×</p>
-                  <p className="text-xs text-slate-400">{(utangOffer.a / STROOPS / utangOffer.n).toFixed(2)} XLM</p>
-                </div>
-                <div className="bg-white rounded-lg p-2 border border-slate-200">
-                  <p className="text-sm font-bold text-slate-900 capitalize">{intervalLabel(utangOffer.i)}</p>
-                  <p className="text-xs text-slate-400">interval</p>
-                </div>
+          {/* Offer details */}
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{ border: '1.5px solid #F1F5F9' }}
+          >
+            {utangOffer.d && (
+              <div className="px-5 py-4" style={{ borderBottom: '1px solid #F8FAFC' }}>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Mga Biniling Item</p>
+                <p className="text-base font-bold text-slate-800">{utangOffer.d}</p>
               </div>
+            )}
+
+            <div className="grid grid-cols-3 divide-x divide-slate-100">
+              <div className="p-4 text-center">
+                <p
+                  className="text-xl font-black text-slate-900 leading-tight"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                >
+                  {(utangOffer.a / STROOPS).toFixed(2)}
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">XLM total</p>
+              </div>
+              <div className="p-4 text-center">
+                <p
+                  className="text-xl font-black text-slate-900 leading-tight"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                >
+                  {utangOffer.n}×
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {(utangOffer.a / STROOPS / utangOffer.n).toFixed(2)} XLM
+                </p>
+              </div>
+              <div className="p-4 text-center">
+                <p
+                  className="text-base font-black text-slate-900 leading-tight capitalize"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                >
+                  {intervalLabel(utangOffer.i)}
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">interval</p>
+              </div>
+            </div>
+
+            <div className="px-5 py-3" style={{ borderTop: '1px solid #F8FAFC', backgroundColor: '#FAFAFA' }}>
               <p className="text-xs text-slate-400 font-mono truncate">
                 Vendor: {utangOffer.v.slice(0, 12)}…{utangOffer.v.slice(-6)}
               </p>
             </div>
+          </div>
 
-            {utangAcceptStatus === 'idle' && (
+          {utangAcceptStatus === 'idle' && (
+            <button
+              onClick={handleAcceptUtang}
+              className="w-full text-white font-black rounded-2xl active:scale-95 transition-all"
+              style={{
+                backgroundColor: '#0F766E',
+                minHeight: '60px',
+                fontSize: '1.05rem',
+                fontFamily: "'Syne', sans-serif",
+                boxShadow: '0 6px 24px rgba(15,118,110,0.4)',
+              }}
+            >
+              Tanggapin at I-sign
+            </button>
+          )}
+
+          {(utangAcceptStatus === 'signing' || isCreating) && (
+            <div
+              className="text-center py-6 space-y-3 rounded-2xl"
+              style={{ backgroundColor: '#F8FAFC' }}
+            >
+              <Loader2 className="animate-spin mx-auto" size={28} style={{ color: '#0F766E' }} />
+              <p className="text-sm font-bold text-slate-600">Kumpirmahin sa iyong wallet…</p>
+              <p className="text-xs text-slate-400">Sa mobile: buksan ang LOBSTR app at i-approve.</p>
+            </div>
+          )}
+
+          {utangAcceptStatus === 'failed' && (
+            <div className="space-y-3">
+              <div
+                className="flex items-center gap-3 p-4 rounded-2xl"
+                style={{ backgroundColor: '#FFF1F2', border: '1.5px solid #FECDD3' }}
+              >
+                <AlertTriangle size={18} style={{ color: '#F43F5E' }} />
+                <p className="text-sm font-semibold text-rose-700 flex-1">{utangError}</p>
+              </div>
               <button
                 onClick={handleAcceptUtang}
-                className="w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-xl text-sm font-semibold transition-colors"
+                className="w-full text-white font-bold rounded-2xl active:scale-95"
+                style={{ backgroundColor: '#0F766E', minHeight: '56px' }}
               >
-                Accept &amp; Sign
+                Subukan Ulit
               </button>
-            )}
-
-            {(utangAcceptStatus === 'signing' || isCreating) && (
-              <div className="text-center py-3 space-y-2">
-                <Loader2 className="animate-spin mx-auto text-teal-600" size={24} />
-                <p className="text-sm text-slate-500">Confirm in your wallet…</p>
-                <p className="text-xs text-slate-400">On mobile: open LOBSTR app and approve.</p>
-              </div>
-            )}
-
-            {utangAcceptStatus === 'failed' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 justify-center text-rose-600">
-                  <AlertTriangle size={16} />
-                  <span className="text-sm font-semibold">Failed</span>
-                </div>
-                <p className="text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2 text-center">{utangError}</p>
-                <button
-                  onClick={handleAcceptUtang}
-                  className="w-full bg-teal-700 text-white py-2.5 rounded-xl text-sm font-semibold"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Step: utang accepted ───────────────────────── */}
+      {/* ── Step: utang done ── */}
       {step === 'utang_done' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
-          <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={28} className="text-teal-600" />
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Agreement accepted!</h2>
-          <p className="text-sm text-slate-500 mb-4">Installment plan is now active.</p>
-          {utangTxHash && (
-            <a
-              href={stellarExpertUrl(utangTxHash)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 text-sm text-teal-700 underline underline-offset-2 mb-6"
+        <div className="px-4 pt-2">
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{ border: '1.5px solid #F1F5F9' }}
+          >
+            <div
+              className="p-8 text-center"
+              style={{ background: 'linear-gradient(135deg, #1C1917 0%, #D97706 100%)' }}
             >
-              View on Stellar Expert <ExternalLink size={13} />
-            </a>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => navigate('/customer/utang')}
-              className="border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl text-sm hover:bg-slate-50 transition-colors"
-            >
-              View Utang
-            </button>
-            <button
-              onClick={() => navigate('/customer/home')}
-              className="bg-teal-700 hover:bg-teal-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
-            >
-              Home
-            </button>
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
+                <CheckCircle size={40} className="text-white" />
+              </div>
+              <h2
+                className="text-xl font-black text-white mb-1"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                Kasunduan Tinanggap!
+              </h2>
+              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                Aktibo na ang installment plan.
+              </p>
+            </div>
+
+            <div className="bg-white p-5 space-y-3">
+              {utangTxHash && (
+                <a
+                  href={stellarExpertUrl(utangTxHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-xl w-full active:scale-95"
+                  style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
+                >
+                  <ExternalLink size={13} /> Tingnan sa Stellar Expert
+                </a>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => navigate('/customer/utang')}
+                  className="font-bold rounded-2xl active:scale-95 text-sm"
+                  style={{
+                    minHeight: '52px',
+                    border: '2px solid #E2E8F0',
+                    color: '#475569',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  Tingnan Utang
+                </button>
+                <button
+                  onClick={() => navigate('/customer/home')}
+                  className="font-bold rounded-2xl active:scale-95 text-sm text-white"
+                  style={{ minHeight: '52px', backgroundColor: '#0F766E' }}
+                >
+                  Home
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

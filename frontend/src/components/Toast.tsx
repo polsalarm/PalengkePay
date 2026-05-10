@@ -24,27 +24,38 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 let counter = 0;
 const MAX_TOASTS = 3;
 
-const TOAST_STYLES: Record<ToastType, string> = {
-  success: 'bg-green-50 border-green-200 text-green-800',
-  error:   'bg-red-50 border-red-200 text-red-800',
-  warning: 'bg-amber-50 border-amber-200 text-amber-800',
-  info:    'bg-slate-50 border-slate-200 text-slate-800',
+const TOAST_CONFIG: Record<ToastType, {
+  bg: string; border: string; iconColor: string;
+  iconBg: string; textColor: string; actionBg: string; actionColor: string;
+}> = {
+  success: {
+    bg: '#0A3D38', border: 'rgba(20,184,166,0.3)',
+    iconColor: '#4ADE80', iconBg: 'rgba(74,222,128,0.15)',
+    textColor: 'white', actionBg: 'rgba(74,222,128,0.15)', actionColor: '#4ADE80',
+  },
+  error: {
+    bg: '#1C0A0E', border: 'rgba(244,63,94,0.35)',
+    iconColor: '#FB7185', iconBg: 'rgba(244,63,94,0.15)',
+    textColor: 'white', actionBg: 'rgba(244,63,94,0.15)', actionColor: '#FB7185',
+  },
+  warning: {
+    bg: '#1C1200', border: 'rgba(245,158,11,0.35)',
+    iconColor: '#FCD34D', iconBg: 'rgba(245,158,11,0.15)',
+    textColor: 'white', actionBg: 'rgba(245,158,11,0.15)', actionColor: '#FCD34D',
+  },
+  info: {
+    bg: '#0F1629', border: 'rgba(99,102,241,0.3)',
+    iconColor: '#818CF8', iconBg: 'rgba(99,102,241,0.15)',
+    textColor: 'white', actionBg: 'rgba(99,102,241,0.15)', actionColor: '#818CF8',
+  },
 };
 
-const TOAST_ACTION_STYLES: Record<ToastType, string> = {
-  success: 'text-green-700 hover:text-green-900 border-green-300',
-  error:   'text-red-700 hover:text-red-900 border-red-300',
-  warning: 'text-amber-700 hover:text-amber-900 border-amber-300',
-  info:    'text-teal-700 hover:text-teal-900 border-teal-300',
+const TOAST_ICONS: Record<ToastType, typeof CheckCircle> = {
+  success: CheckCircle,
+  error: XCircle,
+  warning: AlertTriangle,
+  info: Info,
 };
-
-function ToastIcon({ type }: { type: ToastType }) {
-  const cls = 'shrink-0';
-  if (type === 'success') return <CheckCircle size={16} className={cls} />;
-  if (type === 'error')   return <XCircle size={16} className={cls} />;
-  if (type === 'warning') return <AlertTriangle size={16} className={cls} />;
-  return <Info size={16} className={cls} />;
-}
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -65,27 +76,65 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border pointer-events-auto animate-toast ${TOAST_STYLES[toast.type]}`}
-          >
-            <ToastIcon type={toast.type} />
-            <span className="text-sm font-medium flex-1">{toast.message}</span>
-            {toast.action && (
-              <button
-                onClick={() => { toast.action!.onClick(); dismiss(toast.id); }}
-                className={`shrink-0 text-xs font-bold border rounded-md px-2 py-0.5 transition-colors ${TOAST_ACTION_STYLES[toast.type]}`}
+      <div
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none"
+        style={{ zIndex: 9999 }}
+      >
+        {toasts.map((toast) => {
+          const cfg = TOAST_CONFIG[toast.type];
+          const Icon = TOAST_ICONS[toast.type];
+          return (
+            <div
+              key={toast.id}
+              className="flex items-center gap-3 px-4 py-3.5 pointer-events-auto animate-toast"
+              style={{
+                backgroundColor: cfg.bg,
+                border: `1px solid ${cfg.border}`,
+                borderRadius: 18,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              {/* Icon */}
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: cfg.iconBg }}
               >
-                {toast.action.label}
+                <Icon size={15} style={{ color: cfg.iconColor }} />
+              </div>
+
+              {/* Message */}
+              <span
+                className="text-sm font-semibold flex-1 leading-snug"
+                style={{ color: cfg.textColor }}
+              >
+                {toast.message}
+              </span>
+
+              {/* Action button */}
+              {toast.action && (
+                <button
+                  onClick={() => { toast.action!.onClick(); dismiss(toast.id); }}
+                  className="shrink-0 text-xs font-black px-2.5 py-1 rounded-lg active:scale-95 transition-all"
+                  style={{ backgroundColor: cfg.actionBg, color: cfg.actionColor }}
+                >
+                  {toast.action.label}
+                </button>
+              )}
+
+              {/* Dismiss */}
+              <button
+                onClick={() => dismiss(toast.id)}
+                className="shrink-0 active:scale-95 transition-opacity ml-0.5"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+                onMouseEnter={(e) => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.7)'; }}
+                onMouseLeave={(e) => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.3)'; }}
+              >
+                <X size={14} />
               </button>
-            )}
-            <button onClick={() => dismiss(toast.id)} className="shrink-0 opacity-40 hover:opacity-80 transition-opacity ml-0.5">
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );

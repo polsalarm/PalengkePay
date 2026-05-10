@@ -1,79 +1,101 @@
 import { useState } from 'react';
-import { Search, Store, MapPin, Tag, RefreshCw, ArrowUpDown } from 'lucide-react';
+import { Search, Store, RefreshCw, MapPin, Zap } from 'lucide-react';
 import { useAllVendors } from '../lib/hooks/useVendor';
 import type { VendorProfile } from '../lib/hooks/useVendor';
 
-const PRODUCT_EMOJIS: Record<string, string> = {
-  fish: '🐟',
-  meat: '🥩',
-  vegetables: '🥦',
-  fruits: '🍎',
-  'rice & grains': '🌾',
-  spices: '🌶️',
-  other: '🛒',
+const PRODUCT_META: Record<string, { emoji: string; label: string; accent: string; bg: string; chipBg: string; chipColor: string }> = {
+  fish:            { emoji: '🐟', label: 'Fish',          accent: '#2563EB', bg: '#EFF6FF', chipBg: '#DBEAFE', chipColor: '#1D4ED8' },
+  meat:            { emoji: '🥩', label: 'Meat',          accent: '#DC2626', bg: '#FEF2F2', chipBg: '#FEE2E2', chipColor: '#B91C1C' },
+  vegetables:      { emoji: '🥦', label: 'Vegetables',    accent: '#16A34A', bg: '#F0FDF4', chipBg: '#DCFCE7', chipColor: '#15803D' },
+  fruits:          { emoji: '🍎', label: 'Fruits',        accent: '#EA580C', bg: '#FFF7ED', chipBg: '#FED7AA', chipColor: '#C2410C' },
+  'rice & grains': { emoji: '🌾', label: 'Rice & Grains', accent: '#CA8A04', bg: '#FEFCE8', chipBg: '#FEF08A', chipColor: '#A16207' },
+  spices:          { emoji: '🌶️', label: 'Spices',        accent: '#DB2777', bg: '#FDF2F8', chipBg: '#FBCFE8', chipColor: '#BE185D' },
+  other:           { emoji: '🛒', label: 'Other',         accent: '#475569', bg: '#F8FAFC', chipBg: '#E2E8F0', chipColor: '#334155' },
 };
 
-const EMOJI_COLORS: Record<string, string> = {
-  fish: 'bg-blue-50 border-blue-100',
-  meat: 'bg-red-50 border-red-100',
-  vegetables: 'bg-green-50 border-green-100',
-  fruits: 'bg-orange-50 border-orange-100',
-  'rice & grains': 'bg-yellow-50 border-yellow-100',
-  spices: 'bg-rose-50 border-rose-100',
-  other: 'bg-slate-50 border-slate-100',
-};
-
+const ALL_TYPES = ['all', 'fish', 'meat', 'vegetables', 'fruits', 'rice & grains', 'spices', 'other'] as const;
 type SortMode = 'alphabetical' | 'most_active';
 
 function VendorCard({ vendor }: { vendor: VendorProfile }) {
-  const emoji = PRODUCT_EMOJIS[vendor.productType] ?? '🛒';
-  const emojiColor = EMOJI_COLORS[vendor.productType] ?? 'bg-slate-50 border-slate-100';
+  const meta = PRODUCT_META[vendor.productType] ?? PRODUCT_META.other;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-3 hover:border-teal-300 hover:shadow-md active:scale-[0.98] transition-all">
-      {/* Emoji badge */}
-      <div className="flex items-start justify-between gap-2">
-        <div className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center text-3xl shrink-0 ${emojiColor}`}>
-          {emoji}
-        </div>
+    <div
+      className="rounded-3xl overflow-hidden transition-all active:scale-[0.97]"
+      style={{
+        border: '1.5px solid #F1F5F9',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+      }}
+    >
+      {/* Card header — product color bg */}
+      <div
+        className="px-4 pt-4 pb-3 flex items-start justify-between gap-2"
+        style={{ backgroundColor: meta.bg }}
+      >
+        <span className="text-4xl leading-none select-none">{meta.emoji}</span>
         {vendor.isActive && (
-          <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full mt-0.5">
+          <div
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+            style={{ backgroundColor: '#DCFCE7', color: '#15803D' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#22C55E' }} />
             Open
+          </div>
+        )}
+      </div>
+
+      {/* Card body — white */}
+      <div className="bg-white px-4 py-3 space-y-2">
+        <p
+          className="font-black text-slate-900 leading-tight truncate"
+          style={{ fontFamily: "'Syne', sans-serif", fontSize: '0.9rem' }}
+        >
+          {vendor.name}
+        </p>
+
+        <div className="flex items-center gap-1.5">
+          <MapPin size={10} style={{ color: '#94A3B8' }} className="shrink-0" />
+          <p className="text-xs text-slate-400 truncate">Stall {vendor.stallNumber}</p>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full capitalize"
+            style={{ backgroundColor: meta.chipBg, color: meta.chipColor }}
+          >
+            {meta.label}
           </span>
-        )}
-      </div>
-
-      {/* Name + stall */}
-      <div className="min-w-0">
-        <p className="font-bold text-slate-900 text-sm truncate">{vendor.name}</p>
-        <div className="flex items-center gap-1 mt-0.5">
-          <MapPin size={11} className="text-slate-400 shrink-0" />
-          <p className="text-xs text-slate-500 truncate">Stall {vendor.stallNumber}</p>
+          {vendor.totalTransactions > 0 && (
+            <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-0.5">
+              <Zap size={9} style={{ color: '#FCD34D' }} />
+              {vendor.totalTransactions}
+            </span>
+          )}
         </div>
-      </div>
-
-      {/* Product type + stats */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <Tag size={10} className="text-teal-500 shrink-0" />
-          <span className="text-xs font-medium text-teal-700 capitalize">{vendor.productType}</span>
-        </div>
-        {vendor.totalTransactions > 0 && (
-          <p className="text-xs text-slate-400">
-            {vendor.totalTransactions} txn{vendor.totalTransactions !== 1 ? 's' : ''}
-          </p>
-        )}
       </div>
     </div>
   );
 }
 
-const ALL_TYPES = ['all', 'fish', 'meat', 'vegetables', 'fruits', 'rice & grains', 'spices', 'other'];
+function SkeletonCard() {
+  return (
+    <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #F1F5F9' }}>
+      <div className="px-4 pt-4 pb-3" style={{ backgroundColor: '#F8FAFC' }}>
+        <div className="w-10 h-10 skeleton rounded-2xl" />
+      </div>
+      <div className="bg-white px-4 py-3 space-y-2">
+        <div className="h-4 w-24 skeleton rounded" />
+        <div className="h-3 w-16 skeleton rounded" />
+        <div className="h-4 w-14 skeleton rounded-full" />
+      </div>
+    </div>
+  );
+}
 
 export function MarketDirectory() {
   const { vendors, isLoading, error, refetch } = useAllVendors();
   const [query, setQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortMode, setSortMode] = useState<SortMode>('alphabetical');
 
   const active = vendors.filter((v) => v.isActive);
@@ -89,110 +111,165 @@ export function MarketDirectory() {
         v.productType.toLowerCase().includes(q);
       return matchType && matchQuery;
     })
-    .sort((a, b) => {
-      if (sortMode === 'most_active') return b.totalTransactions - a.totalTransactions;
-      return a.name.localeCompare(b.name);
-    });
+    .sort((a, b) =>
+      sortMode === 'most_active'
+        ? b.totalTransactions - a.totalTransactions
+        : a.name.localeCompare(b.name)
+    );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Market Directory</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {isLoading ? 'Loading…' : `${active.length} registered vendor${active.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-        <button
-          onClick={refetch}
-          className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-          title="Refresh"
-        >
-          <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-        </button>
-      </div>
+    <div className="space-y-4 animate-page-in">
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, stall, or product…"
-          className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder:text-slate-300"
+      {/* ── Hero bar ── */}
+      <div className="relative rounded-3xl overflow-hidden" style={{ backgroundColor: '#0A3D38' }}>
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage: `repeating-linear-gradient(45deg, white 0px, white 1px, transparent 1px, transparent 12px),
+              repeating-linear-gradient(-45deg, white 0px, white 1px, transparent 1px, transparent 12px)`,
+          }}
         />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: -50, right: -30, width: 180, height: 180, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(20,184,166,0.3) 0%, transparent 65%)',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div className="relative p-5">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Palengke Directory
+              </p>
+              <p
+                className="text-xl font-black text-white"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                {isLoading ? '…' : active.length}
+                <span className="text-sm font-semibold ml-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {isLoading ? '' : `vendor${active.length !== 1 ? 's' : ''} open`}
+                </span>
+              </p>
+            </div>
+            <button
+              onClick={refetch}
+              className="w-9 h-9 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+            >
+              <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} style={{ color: 'rgba(255,255,255,0.6)' }} />
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Hanapin ang vendor, stall, o produkto…"
+              className="w-full pl-9 pr-4 py-3 text-sm font-medium rounded-2xl focus:outline-none transition-all placeholder:font-normal"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '1.5px solid rgba(255,255,255,0.1)',
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#14B8A6'; e.target.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Type filter + sort row */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {ALL_TYPES.map((t) => (
+      {/* ── Filter chips ── */}
+      <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+        {ALL_TYPES.map((t) => {
+          const active = typeFilter === t;
+          const meta = t !== 'all' ? PRODUCT_META[t] : null;
+          return (
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
-                typeFilter === t
-                  ? 'bg-teal-700 text-white'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:border-teal-300'
-              }`}
+              className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full transition-all active:scale-95"
+              style={active
+                ? { backgroundColor: '#0F766E', color: 'white', boxShadow: '0 2px 8px rgba(15,118,110,0.3)' }
+                : { backgroundColor: 'white', color: '#64748B', border: '1.5px solid #E2E8F0' }
+              }
             >
-              {t === 'all' ? 'All' : `${PRODUCT_EMOJIS[t] ?? ''} ${t}`}
+              {meta && <span>{meta.emoji}</span>}
+              {t === 'all' ? 'Lahat' : meta?.label ?? t}
             </button>
-          ))}
-        </div>
+          );
+        })}
 
-        {/* Sort */}
+        {/* Sort toggle */}
         <button
           onClick={() => setSortMode((s) => s === 'alphabetical' ? 'most_active' : 'alphabetical')}
-          className={`shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
-            sortMode === 'most_active'
-              ? 'bg-teal-50 border-teal-300 text-teal-700'
-              : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-          }`}
-          title={sortMode === 'alphabetical' ? 'Sort: A–Z' : 'Sort: Most Active'}
+          className="shrink-0 flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-full transition-all active:scale-95 ml-auto"
+          style={sortMode === 'most_active'
+            ? { backgroundColor: '#FFFBEB', color: '#D97706', border: '1.5px solid #FDE68A' }
+            : { backgroundColor: 'white', color: '#94A3B8', border: '1.5px solid #E2E8F0' }
+          }
         >
-          <ArrowUpDown size={11} />
-          {sortMode === 'alphabetical' ? 'A–Z' : 'Active'}
+          <Zap size={11} />
+          {sortMode === 'alphabetical' ? 'A–Z' : 'Most Active'}
         </button>
       </div>
 
+      {/* ── Error ── */}
       {error && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-sm text-rose-600">
-          Failed to load vendors.{' '}
-          <button onClick={refetch} className="font-semibold underline">Retry</button>
+        <div
+          className="rounded-2xl p-4 flex items-center justify-between gap-3"
+          style={{ backgroundColor: '#FFF1F2', border: '1.5px solid #FECDD3' }}
+        >
+          <p className="text-sm font-semibold" style={{ color: '#F43F5E' }}>Failed to load vendors.</p>
+          <button
+            onClick={refetch}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl active:scale-95 text-white"
+            style={{ backgroundColor: '#F43F5E' }}
+          >
+            Retry
+          </button>
         </div>
       )}
 
+      {/* ── Loading skeletons ── */}
       {isLoading && (
         <div className="grid grid-cols-2 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 animate-pulse" />
-              <div className="h-4 w-24 bg-slate-200 animate-pulse rounded" />
-              <div className="h-3 w-16 bg-slate-100 animate-pulse rounded" />
-            </div>
-          ))}
+          {[1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}
         </div>
       )}
 
+      {/* ── Empty state ── */}
       {!isLoading && filtered.length === 0 && !error && (
-        <div className="text-center py-12">
-          <Store size={36} className="text-slate-200 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-400">
-            {query || typeFilter !== 'all' ? 'No vendors match your search' : 'No vendors registered yet'}
+        <div className="py-14 text-center">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: '#F0FDFA', border: '1.5px solid #CCFBF1' }}
+          >
+            <Store size={28} style={{ color: '#0F766E' }} />
+          </div>
+          <p className="text-sm font-bold text-slate-700 mb-1" style={{ fontFamily: "'Syne', sans-serif" }}>
+            {query || typeFilter !== 'all' ? 'Walang nahanap' : 'Wala pang vendor'}
+          </p>
+          <p className="text-xs text-slate-400 mb-4">
+            {query || typeFilter !== 'all' ? 'Subukan ng ibang search o filter' : 'Maging una sa palengke'}
           </p>
           {(query || typeFilter !== 'all') && (
             <button
               onClick={() => { setQuery(''); setTypeFilter('all'); }}
-              className="mt-2 text-xs text-teal-600 hover:underline"
+              className="text-xs font-bold px-4 py-2 rounded-xl active:scale-95 text-white"
+              style={{ backgroundColor: '#0F766E' }}
             >
-              Clear filters
+              I-clear ang filters
             </button>
           )}
         </div>
       )}
 
+      {/* ── Vendor grid ── */}
       {!isLoading && filtered.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((v) => (

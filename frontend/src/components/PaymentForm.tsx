@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Send, Store, Zap } from 'lucide-react';
+import { Store, Zap } from 'lucide-react';
 import type { VendorProfile } from '../lib/hooks/useVendor';
 
 const MEMO_MAX = 28;
-// Approximate XLM/PHP rate — cosmetic display only
 const XLM_TO_PHP = 8.5;
 
 interface Props {
@@ -26,7 +25,7 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=php')
       .then((r) => r.json())
       .then((d) => { if (d?.stellar?.php) setPhpRate(d.stellar.php); })
-      .catch(() => { /* keep fallback */ });
+      .catch(() => {});
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,65 +49,93 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
   const memoNearLimit = memoLeft <= 8;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Vendor info */}
-      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-teal-700 flex items-center justify-center shrink-0">
-            <Store size={18} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            {isLoading && !preloadedVendorName ? (
-              <>
-                <div className="h-4 w-32 skeleton rounded mb-1" />
-                <div className="h-3 w-24 skeleton rounded" />
-              </>
-            ) : displayName ? (
-              <>
-                <p className="font-semibold text-slate-900">Paying: {displayName}</p>
-                {displayStall && <p className="text-xs text-slate-500">{displayStall}</p>}
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-slate-900">Paying vendor</p>
-                <p className="text-xs font-mono text-slate-400 truncate">{vendorAddress}</p>
-              </>
-            )}
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-3">
+
+      {/* ── Vendor card ── */}
+      <div
+        className="rounded-2xl p-4 flex items-center gap-3"
+        style={{ backgroundColor: '#F0FDFA', border: '2px solid #CCFBF1' }}
+      >
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: '#0F766E' }}
+        >
+          <Store size={20} className="text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          {isLoading && !preloadedVendorName ? (
+            <>
+              <div className="h-4 w-32 skeleton rounded mb-1.5" />
+              <div className="h-3 w-24 skeleton rounded" />
+            </>
+          ) : displayName ? (
+            <>
+              <p className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: '#0F766E' }}>
+                Nagbabayad kay
+              </p>
+              <p className="text-base font-black text-slate-900 truncate" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {displayName}
+              </p>
+              {displayStall && (
+                <p className="text-xs text-slate-400 mt-0.5">{displayStall}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: '#0F766E' }}>
+                Nagbabayad sa
+              </p>
+              <p className="text-sm font-mono text-slate-500 truncate">{vendorAddress}</p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Amount */}
+      {/* ── Amount ── */}
       <div>
-        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-          Amount (XLM)
+        <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+          Halaga (XLM)
         </label>
-        <input
-          type="number"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-          className="w-full border border-slate-200 rounded-lg px-4 py-3 text-xl font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-slate-200"
-          autoFocus
-        />
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            className="w-full rounded-2xl px-4 font-black text-slate-900 focus:outline-none transition-all"
+            style={{
+              border: '2px solid #E2E8F0',
+              padding: '16px',
+              fontSize: '1.6rem',
+              letterSpacing: '-0.02em',
+              fontFamily: "'Syne', sans-serif",
+            }}
+            onFocus={(e) => { e.target.style.borderColor = '#0F766E'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#E2E8F0'; }}
+            autoFocus
+          />
+        </div>
         {phpEst && (
-          <p className="text-xs text-slate-400 mt-1.5 text-right">
-            ≈ <span className="text-slate-600 font-semibold">₱{phpEst}</span>
+          <p className="text-xs text-right mt-1.5 font-medium" style={{ color: '#64748B' }}>
+            ≈ <span className="font-black" style={{ color: '#0F766E' }}>₱{phpEst}</span>
             <span className="text-slate-300 ml-1">(approx)</span>
           </p>
         )}
       </div>
 
-      {/* Memo */}
+      {/* ── Memo ── */}
       <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs font-semibold text-slate-600">
-            What did you buy? <span className="font-normal text-slate-400">(optional)</span>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-black uppercase tracking-wider text-slate-500">
+            Ano ang binili? <span className="font-normal normal-case tracking-normal text-slate-400">(optional)</span>
           </label>
-          <span className={`text-xs font-medium tabular-nums ${memoNearLimit ? 'text-amber-500' : 'text-slate-300'}`}>
+          <span
+            className="text-xs font-bold tabular-nums"
+            style={{ color: memoNearLimit ? '#F59E0B' : '#CBD5E1' }}
+          >
             {memo.length}/{MEMO_MAX}
           </span>
         </div>
@@ -118,25 +145,42 @@ export function PaymentForm({ vendorAddress, vendor, isLoading, preloadedVendorN
           onChange={(e) => setMemo(e.target.value)}
           placeholder="e.g. 2kg tilapia"
           maxLength={MEMO_MAX}
-          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-slate-300"
+          className="w-full rounded-2xl px-4 py-3.5 text-sm font-semibold text-slate-800 focus:outline-none transition-all placeholder:font-normal placeholder:text-slate-300"
+          style={{ border: '2px solid #E2E8F0' }}
+          onFocus={(e) => { e.target.style.borderColor = '#0F766E'; }}
+          onBlur={(e) => { e.target.style.borderColor = '#E2E8F0'; }}
         />
       </div>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <p className="text-xs font-semibold px-1" style={{ color: '#F43F5E' }}>{error}</p>
+      )}
 
+      {/* ── Gasless badge ── */}
+      <div
+        className="flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold"
+        style={{ backgroundColor: '#F0FDF4', color: '#16A34A' }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#22C55E' }} />
+        Gasless — fees sponsored, zero cost sa iyo
+      </div>
+
+      {/* ── Submit ── */}
       <button
         type="submit"
         disabled={disabled}
-        className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-600 active:scale-95 text-white font-semibold py-4 rounded-xl text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+        className="w-full text-white font-black rounded-2xl active:scale-95 transition-all disabled:opacity-40"
+        style={{
+          backgroundColor: '#0F766E',
+          minHeight: '60px',
+          fontSize: '1.05rem',
+          fontFamily: "'Syne', sans-serif",
+          boxShadow: '0 6px 24px rgba(15,118,110,0.35)',
+        }}
       >
-        <Send size={18} />
-        Pay Now
+        <Zap size={16} className="inline mr-2 -mt-0.5" />
+        Bayaran Ngayon
       </button>
-
-      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
-        <Zap size={11} className="text-teal-500" />
-        <span>Gasless — fees sponsored, zero cost to you</span>
-      </div>
     </form>
   );
 }

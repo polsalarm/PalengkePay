@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, X, HandCoins, AlertTriangle, ScanLine, Keyboard, QrCode, ChevronLeft, Loader2, CheckCircle, ShieldCheck, Download } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { useWallet } from '../../lib/hooks/useWallet';
@@ -13,20 +14,20 @@ const FEE_XLM = import.meta.env.VITE_UTANG_FEE_XLM ?? '1';
 const FEE_DEST = 'GBI5W3JPFNGBMW2TCSGTNL3NPW6E423UN4BMAXAU34AXTSMTSDT2JDXH';
 
 const INTERVAL_OPTIONS = [
-  { label: 'Weekly', days: 7 },
-  { label: 'Biweekly', days: 14 },
-  { label: 'Monthly', days: 30 },
+  { label: 'Weekly', labelTl: 'Lingguwal', days: 7 },
+  { label: 'Biweekly', labelTl: 'Dalawang Linggo', days: 14 },
+  { label: 'Monthly', labelTl: 'Buwanang', days: 30 },
 ];
 const INSTALLMENT_OPTIONS = [2, 3, 4, 5, 6];
 const STROOPS = 10_000_000;
 
 export interface UtangOfferPayload {
   t: 'u';
-  v: string;   // vendor address
-  a: number;   // total amount in stroops
-  n: number;   // installments
-  i: number;   // interval seconds
-  d: string;   // description
+  v: string;
+  a: number;
+  n: number;
+  i: number;
+  d: string;
 }
 
 type Mode = 'qr' | 'manual';
@@ -49,11 +50,19 @@ const DEFAULT_FORM: UtangForm = {
   description: '',
 };
 
+const FILTER_LABELS: Record<string, { en: string; tl: string }> = {
+  all:       { en: 'All',       tl: 'Lahat' },
+  active:    { en: 'Active',    tl: 'Aktibo' },
+  completed: { en: 'Completed', tl: 'Tapos na' },
+  defaulted: { en: 'Defaulted', tl: 'Defaulted' },
+};
+
 export function VendorUtang() {
   const { address } = useWallet();
   const { utangs, isLoading, refetch } = useVendorUtangs(address);
   const { createUtang, isCreating, error: createError } = useCreateUtang();
 
+  const [lang, setLang] = useState<'en' | 'tl'>('tl');
   const [showPanel, setShowPanel] = useState(false);
   const [mode, setMode] = useState<Mode>('qr');
   const [step, setStep] = useState<Step>('form');
@@ -77,15 +86,18 @@ export function VendorUtang() {
     ? (Number(form.totalAmountXlm) / form.installmentsTotal).toFixed(2)
     : null;
 
+  const owedStr = totalOwed.toFixed(2);
+  const owedFontSize = owedStr.length >= 10 ? '1.8rem' : owedStr.length >= 8 ? '2.2rem' : owedStr.length >= 6 ? '2.8rem' : '3.4rem';
+
   function validate(): boolean {
     setFormError(null);
     if (!address) { setFormError('Wallet not connected'); return false; }
-    if (!form.description.trim()) { setFormError('Enter items description'); return false; }
+    if (!form.description.trim()) { setFormError(lang === 'tl' ? 'Ilagay ang mga items' : 'Enter items description'); return false; }
     const amount = parseFloat(form.totalAmountXlm);
-    if (!amount || amount <= 0) { setFormError('Enter a valid amount'); return false; }
+    if (!amount || amount <= 0) { setFormError(lang === 'tl' ? 'Ilagay ang tamang halaga' : 'Enter a valid amount'); return false; }
     if (mode === 'manual') {
       if (!form.customerWallet.trim().startsWith('G') || form.customerWallet.trim().length !== 56) {
-        setFormError('Enter a valid Stellar wallet address (G..., 56 chars)');
+        setFormError(lang === 'tl' ? 'Ilagay ang wastong Stellar wallet address (G..., 56 chars)' : 'Enter a valid Stellar wallet address (G..., 56 chars)');
         return false;
       }
     }
@@ -94,7 +106,6 @@ export function VendorUtang() {
 
   function handleGenerateQR() {
     if (!validate() || !address) return;
-    // Go to fee payment step first
     setFeeStatus('idle');
     setFeeError(null);
     setStep('fee_payment');
@@ -112,7 +123,6 @@ export function VendorUtang() {
       });
       await submitTx(signedTxXdr);
       setFeeStatus('paid');
-      // Build payload and advance to QR display
       setQrPayload({
         t: 'u',
         v: address,
@@ -126,7 +136,7 @@ export function VendorUtang() {
       const msg = (err as { message?: string }).message ?? String(err);
       setFeeError(
         msg.includes('rejected') || msg.includes('cancel')
-          ? 'Transaction cancelled'
+          ? (lang === 'tl' ? 'Kinansela ang transaksyon' : 'Transaction cancelled')
           : msg.slice(0, 120)
       );
       setFeeStatus('failed');
@@ -170,367 +180,725 @@ export function VendorUtang() {
     setFeeError(null);
   }
 
+  const stepTitle = step === 'qr_display'
+    ? (lang === 'tl' ? 'Ipakita sa Customer' : 'Show QR to Customer')
+    : step === 'fee_payment'
+    ? (lang === 'tl' ? 'Bayad sa Serbisyo' : 'Service Fee')
+    : (lang === 'tl' ? 'Bagong Kasunduan' : 'New Agreement');
+
   return (
     <div className="space-y-5">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Utang (BNPL)</h1>
-          <p className="text-sm text-slate-400">Manage installment agreements</p>
-        </div>
-        {ESCROW_ID && (
-          <button
-            onClick={() => { setShowPanel(true); setMode('qr'); setStep('form'); }}
-            className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+          <h1
+            className="text-xl font-black text-slate-900"
+            style={{ fontFamily: "'Syne', sans-serif" }}
           >
-            <Plus size={15} /> New Utang
+            {lang === 'tl' ? 'Utang (BNPL)' : 'Utang (BNPL)'}
+          </h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {lang === 'tl' ? 'I-manage ang mga installment' : 'Manage installment agreements'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* EN/TL toggle */}
+          <button
+            onClick={() => setLang((l) => l === 'en' ? 'tl' : 'en')}
+            className="flex items-center text-xs font-bold rounded-full px-2.5 py-1 transition-all"
+            style={{
+              backgroundColor: 'rgba(15,118,110,0.1)',
+              color: '#0F766E',
+              border: '1px solid rgba(15,118,110,0.2)',
+            }}
+          >
+            {lang === 'en' ? 'TL' : 'EN'}
           </button>
-        )}
+          {ESCROW_ID && (
+            <button
+              onClick={() => { setShowPanel(true); setMode('qr'); setStep('form'); }}
+              className="flex items-center gap-1.5 text-white px-4 rounded-xl text-sm font-bold transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #0F766E, #0D9488)',
+                minHeight: '44px',
+                boxShadow: '0 4px 14px rgba(15,118,110,0.35)',
+              }}
+            >
+              <Plus size={15} />
+              {lang === 'tl' ? 'Bagong Utang' : 'New Utang'}
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* ── No escrow warning ── */}
       {!ESCROW_ID && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-700">
-            Set <code className="bg-amber-100 px-1 rounded">VITE_UTANG_ESCROW_CONTRACT_ID</code> to enable BNPL.
+        <div
+          className="rounded-2xl p-4 flex gap-3"
+          style={{ backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}
+        >
+          <AlertTriangle size={18} style={{ color: '#D97706' }} className="shrink-0 mt-0.5" />
+          <p className="text-sm" style={{ color: '#92400E' }}>
+            {lang === 'tl'
+              ? <>I-set ang <code style={{ backgroundColor: 'rgba(245,158,11,0.2)', borderRadius: 4, padding: '0 4px' }}>VITE_UTANG_ESCROW_CONTRACT_ID</code> para ma-enable ang BNPL.</>
+              : <>Set <code style={{ backgroundColor: 'rgba(245,158,11,0.2)', borderRadius: 4, padding: '0 4px' }}>VITE_UTANG_ESCROW_CONTRACT_ID</code> to enable BNPL.</>
+            }
           </p>
         </div>
       )}
 
+      {/* ── Outstanding hero ── */}
       {active.length > 0 && (
-        <div className="bg-teal-700 rounded-xl p-5 text-white">
-          <p className="text-xs font-medium text-teal-200 uppercase tracking-wide mb-1">Total Outstanding</p>
-          <p className="text-3xl font-bold">
-            {totalOwed.toFixed(2)} <span className="text-teal-300 text-xl">XLM</span>
+        <div
+          className="rounded-3xl p-6 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #D97706, #F59E0B, #FBBF24)' }}
+        >
+          {/* Banig texture */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.07]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg, white 0px, white 1px, transparent 1px, transparent 10px
+              ), repeating-linear-gradient(
+                -45deg, white 0px, white 1px, transparent 1px, transparent 10px
+              )`,
+            }}
+          />
+          {/* Watermark */}
+          <div
+            className="absolute pointer-events-none select-none font-black"
+            style={{
+              right: -8, bottom: -16, fontSize: 96,
+              color: 'rgba(255,255,255,0.12)',
+              fontFamily: "'Syne', sans-serif",
+              lineHeight: 1,
+            }}
+          >
+            ₱
+          </div>
+
+          <p
+            className="text-xs font-bold uppercase tracking-widest mb-2 relative"
+            style={{ color: 'rgba(120,53,15,0.7)' }}
+          >
+            {lang === 'tl' ? 'Kabuuang Natatanggap' : 'Total Outstanding'}
           </p>
-          <p className="text-sm text-teal-200 mt-0.5">{active.length} active agreement{active.length !== 1 ? 's' : ''}</p>
+          <p
+            className="font-black leading-none relative"
+            style={{
+              fontSize: owedFontSize,
+              color: '#431407',
+              fontFamily: "'Syne', sans-serif",
+            }}
+          >
+            {owedStr}
+            <span className="text-base font-bold ml-2" style={{ color: 'rgba(120,53,15,0.6)' }}>XLM</span>
+          </p>
+          <p className="text-sm font-semibold mt-2 relative" style={{ color: 'rgba(120,53,15,0.7)' }}>
+            {active.length} {lang === 'tl' ? `aktibong kasunduan${active.length !== 1 ? '' : ''}` : `active agreement${active.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
       )}
 
+      {/* ── Filter tabs ── */}
       {utangs.length > 0 && (
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+        <div
+          className="flex gap-1 p-1 rounded-2xl"
+          style={{ backgroundColor: 'rgba(15,23,42,0.06)' }}
+        >
           {(['all', 'active', 'completed', 'defaulted'] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`flex-1 text-xs font-medium py-1.5 rounded-md capitalize transition-colors ${
-                filter === f ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              }`}
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className="flex-1 text-xs font-bold rounded-xl capitalize transition-all"
+              style={{
+                minHeight: '40px',
+                backgroundColor: filter === f ? 'white' : 'transparent',
+                color: filter === f ? '#0F766E' : 'rgba(15,23,42,0.4)',
+                boxShadow: filter === f ? '0 1px 6px rgba(0,0,0,0.12)' : 'none',
+              }}
             >
-              {f}
+              {FILTER_LABELS[f][lang]}
             </button>
           ))}
         </div>
       )}
 
+      {/* ── Loading skeletons ── */}
       {isLoading && (
         <div className="space-y-3">
-          {[1, 2].map((i) => <div key={i} className="bg-white rounded-xl border border-slate-200 h-36 animate-pulse" />)}
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl h-36 animate-pulse"
+              style={{ backgroundColor: 'rgba(15,23,42,0.06)' }}
+            />
+          ))}
         </div>
       )}
 
+      {/* ── Empty state ── */}
       {!isLoading && filtered.length === 0 && ESCROW_ID && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center mx-auto mb-4 border border-teal-100">
-            <HandCoins size={28} className="text-teal-400" />
+        <div
+          className="rounded-3xl p-8 text-center"
+          style={{ backgroundColor: 'white', border: '1px solid rgba(15,23,42,0.08)', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(251,191,36,0.2))' }}
+          >
+            <HandCoins size={28} style={{ color: '#D97706' }} />
           </div>
-          <p className="text-sm font-semibold text-slate-700 mb-1">
-            {filter === 'all' ? 'No agreements yet' : `No ${filter} agreements`}
+          <p className="text-sm font-bold text-slate-700 mb-1">
+            {filter === 'all'
+              ? (lang === 'tl' ? 'Walang kasunduan pa' : 'No agreements yet')
+              : (lang === 'tl' ? `Walang ${FILTER_LABELS[filter].tl.toLowerCase()} na kasunduan` : `No ${filter} agreements`)
+            }
           </p>
           {filter === 'all' && (
             <>
               <p className="text-xs text-slate-400 mb-5">
-                Create an installment agreement for a customer via QR or manual entry
+                {lang === 'tl'
+                  ? 'Gumawa ng installment para sa customer via QR o manual'
+                  : 'Create an installment agreement for a customer via QR or manual entry'}
               </p>
               <button
                 onClick={() => { setShowPanel(true); setMode('qr'); setStep('form'); }}
-                className="inline-flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 px-4 py-2 rounded-full transition-colors"
+                className="inline-flex items-center gap-2 text-xs font-bold px-5 py-2.5 rounded-full transition-all active:scale-95"
+                style={{
+                  backgroundColor: 'rgba(15,118,110,0.1)',
+                  color: '#0F766E',
+                }}
               >
-                <Plus size={12} /> New Utang
+                <Plus size={13} />
+                {lang === 'tl' ? 'Bagong Utang' : 'New Utang'}
               </button>
             </>
           )}
         </div>
       )}
 
+      {/* ── Utang cards ── */}
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((u) => <UtangCard key={String(u.id)} utang={u} perspective="vendor" />)}
         </div>
       )}
 
-      {/* ── New Utang fullscreen panel ──────────────────────────────────── */}
-      {showPanel && (
-        <div className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto">
-          <div className="max-w-md mx-auto px-4 py-6 space-y-5">
+      {/* ── New Utang bottom sheet ── */}
+      {showPanel && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-end justify-end"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+        >
+          <div
+            className="w-full rounded-t-3xl overflow-hidden flex flex-col"
+            style={{
+              backgroundColor: '#F8FAFB',
+              maxHeight: '95dvh',
+              boxShadow: '0 -16px 64px rgba(0,0,0,0.25)',
+            }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(15,23,42,0.15)' }} />
+            </div>
 
-            {/* Top bar */}
-            <div className="flex items-center gap-3">
+            {/* Sheet header */}
+            <div
+              className="flex items-center gap-3 px-5 py-4 shrink-0"
+              style={{ borderBottom: '1px solid rgba(15,23,42,0.08)' }}
+            >
               <button
                 onClick={() => {
                   if (step === 'qr_display') { setStep('form'); setQrPayload(null); }
                   else if (step === 'fee_payment' && feeStatus !== 'paying') { setStep('form'); setFeeStatus('idle'); setFeeError(null); }
                   else if (step === 'form') handleClose();
                 }}
-                className="text-slate-400 hover:text-slate-700 transition-colors"
+                className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95 shrink-0"
+                style={{ backgroundColor: 'rgba(15,23,42,0.07)' }}
               >
-                {step === 'form' ? <X size={22} /> : <ChevronLeft size={22} />}
+                {step === 'form'
+                  ? <X size={16} style={{ color: 'rgba(15,23,42,0.5)' }} />
+                  : <ChevronLeft size={16} style={{ color: 'rgba(15,23,42,0.5)' }} />
+                }
               </button>
-              <h2 className="text-lg font-bold text-slate-900">
-                {step === 'qr_display' ? 'Show QR to Customer' : step === 'fee_payment' ? 'Service Fee' : 'New Installment'}
+              <h2
+                className="text-base font-black text-slate-900"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                {stepTitle}
               </h2>
             </div>
 
-            {/* ── Form step ── */}
-            {step === 'form' && (
-              <>
-                {/* Mode selector */}
-                <div className="grid grid-cols-2 gap-3">
-                  {([
-                    { id: 'qr' as Mode, icon: QrCode, title: 'QR Code', sub: 'Customer scans your screen' },
-                    { id: 'manual' as Mode, icon: Keyboard, title: 'Manual Entry', sub: 'Type / scan customer wallet' },
-                  ]).map(({ id, icon: Icon, title, sub }) => (
-                    <button key={id} onClick={() => { setMode(id); setShowCustomerScanner(false); }}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors text-center ${
-                        mode === id
-                          ? 'border-teal-600 bg-teal-50 text-teal-700'
-                          : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                      }`}
-                    >
-                      <Icon size={26} />
-                      <div>
-                        <p className="text-sm font-semibold">{title}</p>
-                        <p className="text-xs leading-tight mt-0.5">{sub}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4" style={{ paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
 
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-
-                  {/* Manual: customer wallet input */}
-                  {mode === 'manual' && (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Customer Wallet Address</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text" placeholder="G..."
-                          value={form.customerWallet}
-                          onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
-                          className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCustomerScanner((s) => !s)}
-                          className={`flex items-center justify-center px-3 rounded-lg border transition-colors ${
-                            showCustomerScanner ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 text-slate-500 hover:bg-slate-50'
-                          }`}
-                        >
-                          <ScanLine size={16} />
-                        </button>
-                      </div>
-                      {showCustomerScanner && (
-                        <div className="mt-2 rounded-xl overflow-hidden border border-slate-200">
-                          <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-                            <p className="text-xs font-medium text-slate-600">Scan customer's wallet QR</p>
-                            <button onClick={() => setShowCustomerScanner(false)} className="text-slate-400"><X size={14} /></button>
-                          </div>
-                          <QRScanner onScan={(addr) => { setForm((f) => ({ ...f, customerWallet: addr })); setShowCustomerScanner(false); }} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Items description */}
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">
-                      Items <span className="font-normal text-slate-400">(what they're buying on credit)</span>
-                    </label>
-                    <input
-                      type="text" placeholder="e.g. 5kg rice, 2kg pork, vegetables"
-                      maxLength={100}
-                      value={form.description}
-                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  {/* Amount */}
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Total Amount (XLM)</label>
-                    <input
-                      type="number" min="0.01" step="0.01" placeholder="0.00"
-                      value={form.totalAmountXlm}
-                      onChange={(e) => setForm((f) => ({ ...f, totalAmountXlm: e.target.value }))}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-
-                  {/* Installments + Interval */}
+              {/* ── Form step ── */}
+              {step === 'form' && (
+                <>
+                  {/* Mode selector */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Installments</label>
-                      <select value={form.installmentsTotal}
-                        onChange={(e) => setForm((f) => ({ ...f, installmentsTotal: Number(e.target.value) }))}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    {([
+                      { id: 'qr' as Mode, icon: QrCode, titleEn: 'QR Code', titleTl: 'QR Code', subEn: 'Customer scans your screen', subTl: 'I-scan ng customer ang screen mo' },
+                      { id: 'manual' as Mode, icon: Keyboard, titleEn: 'Manual Entry', titleTl: 'Manual Entry', subEn: 'Type / scan customer wallet', subTl: 'I-type o i-scan ang wallet' },
+                    ]).map(({ id, icon: Icon, titleEn, titleTl, subEn, subTl }) => (
+                      <button
+                        key={id}
+                        onClick={() => { setMode(id); setShowCustomerScanner(false); }}
+                        className="flex flex-col items-center gap-2 p-4 rounded-2xl transition-all active:scale-[0.97] text-center"
+                        style={{
+                          border: mode === id ? '2px solid #0F766E' : '2px solid rgba(15,23,42,0.1)',
+                          backgroundColor: mode === id ? 'rgba(15,118,110,0.08)' : 'white',
+                          minHeight: '90px',
+                        }}
                       >
-                        {INSTALLMENT_OPTIONS.map((n) => <option key={n} value={n}>{n}x</option>)}
-                      </select>
-                    </div>
+                        <Icon size={24} style={{ color: mode === id ? '#0F766E' : 'rgba(15,23,42,0.4)' }} />
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: mode === id ? '#0F766E' : '#1e293b' }}>
+                            {lang === 'tl' ? titleTl : titleEn}
+                          </p>
+                          <p className="text-xs leading-tight mt-0.5" style={{ color: 'rgba(15,23,42,0.4)' }}>
+                            {lang === 'tl' ? subTl : subEn}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div
+                    className="rounded-2xl p-5 space-y-4"
+                    style={{ backgroundColor: 'white', border: '1px solid rgba(15,23,42,0.08)', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}
+                  >
+                    {/* Customer wallet (manual mode) */}
+                    {mode === 'manual' && (
+                      <div>
+                        <label className="block text-xs font-bold mb-1.5" style={{ color: '#0F766E' }}>
+                          {lang === 'tl' ? 'Customer Wallet Address' : 'Customer Wallet Address'}
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="G..."
+                            value={form.customerWallet}
+                            onChange={(e) => setForm((f) => ({ ...f, customerWallet: e.target.value }))}
+                            className="flex-1 rounded-xl px-4 text-sm font-mono focus:outline-none"
+                            style={{
+                              border: '1.5px solid rgba(15,23,42,0.15)',
+                              minHeight: '48px',
+                              backgroundColor: 'rgba(15,23,42,0.02)',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCustomerScanner((s) => !s)}
+                            className="flex items-center justify-center rounded-xl transition-all active:scale-95"
+                            style={{
+                              minWidth: 48, minHeight: 48,
+                              border: showCustomerScanner ? 'none' : '1.5px solid rgba(15,23,42,0.15)',
+                              backgroundColor: showCustomerScanner ? '#0F766E' : 'rgba(15,23,42,0.03)',
+                              color: showCustomerScanner ? 'white' : 'rgba(15,23,42,0.4)',
+                            }}
+                          >
+                            <ScanLine size={16} />
+                          </button>
+                        </div>
+                        {showCustomerScanner && (
+                          <div
+                            className="mt-3 rounded-2xl overflow-hidden"
+                            style={{ border: '1.5px solid rgba(15,23,42,0.1)', backgroundColor: '#0A3D38' }}
+                          >
+                            <div
+                              className="flex items-center justify-between px-4 py-3"
+                              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                            >
+                              <p className="text-xs font-bold" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                                {lang === 'tl' ? 'I-scan ang wallet ng customer' : "Scan customer's wallet QR"}
+                              </p>
+                              <button
+                                onClick={() => setShowCustomerScanner(false)}
+                                style={{ color: 'rgba(255,255,255,0.4)' }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <QRScanner onScan={(addr) => { setForm((f) => ({ ...f, customerWallet: addr })); setShowCustomerScanner(false); }} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Items description */}
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Interval</label>
-                      <select value={form.intervalDays}
-                        onChange={(e) => setForm((f) => ({ ...f, intervalDays: Number(e.target.value) }))}
-                        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#0F766E' }}>
+                        {lang === 'tl' ? 'Mga Items' : 'Items'}
+                        <span className="font-normal ml-1" style={{ color: 'rgba(15,23,42,0.35)' }}>
+                          {lang === 'tl' ? '(binibili nila sa credit)' : '(what they\'re buying on credit)'}
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={lang === 'tl' ? 'hal. 5kg bigas, 2kg baboy, gulay' : 'e.g. 5kg rice, 2kg pork, vegetables'}
+                        maxLength={100}
+                        value={form.description}
+                        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                        className="w-full rounded-xl px-4 text-sm focus:outline-none"
+                        style={{
+                          border: '1.5px solid rgba(15,23,42,0.15)',
+                          minHeight: '48px',
+                          backgroundColor: 'rgba(15,23,42,0.02)',
+                        }}
+                      />
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#0F766E' }}>
+                        {lang === 'tl' ? 'Kabuuang Halaga (XLM)' : 'Total Amount (XLM)'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={form.totalAmountXlm}
+                        onChange={(e) => setForm((f) => ({ ...f, totalAmountXlm: e.target.value }))}
+                        className="w-full rounded-xl px-4 text-sm focus:outline-none"
+                        style={{
+                          border: '1.5px solid rgba(15,23,42,0.15)',
+                          minHeight: '48px',
+                          backgroundColor: 'rgba(15,23,42,0.02)',
+                        }}
+                      />
+                    </div>
+
+                    {/* Installments + Interval */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold mb-1.5" style={{ color: '#0F766E' }}>
+                          {lang === 'tl' ? 'Installments' : 'Installments'}
+                        </label>
+                        <select
+                          value={form.installmentsTotal}
+                          onChange={(e) => setForm((f) => ({ ...f, installmentsTotal: Number(e.target.value) }))}
+                          className="w-full rounded-xl px-3 text-sm focus:outline-none"
+                          style={{
+                            border: '1.5px solid rgba(15,23,42,0.15)',
+                            minHeight: '48px',
+                            backgroundColor: 'rgba(15,23,42,0.02)',
+                          }}
+                        >
+                          {INSTALLMENT_OPTIONS.map((n) => <option key={n} value={n}>{n}x</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold mb-1.5" style={{ color: '#0F766E' }}>
+                          {lang === 'tl' ? 'Agwat' : 'Interval'}
+                        </label>
+                        <select
+                          value={form.intervalDays}
+                          onChange={(e) => setForm((f) => ({ ...f, intervalDays: Number(e.target.value) }))}
+                          className="w-full rounded-xl px-3 text-sm focus:outline-none"
+                          style={{
+                            border: '1.5px solid rgba(15,23,42,0.15)',
+                            minHeight: '48px',
+                            backgroundColor: 'rgba(15,23,42,0.02)',
+                          }}
+                        >
+                          {INTERVAL_OPTIONS.map((o) => (
+                            <option key={o.days} value={o.days}>
+                              {lang === 'tl' ? o.labelTl : o.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    {installmentXlm && form.description && (
+                      <div
+                        className="rounded-xl px-4 py-3"
+                        style={{ backgroundColor: 'rgba(15,118,110,0.07)', border: '1px solid rgba(15,118,110,0.15)' }}
                       >
-                        {INTERVAL_OPTIONS.map((o) => <option key={o.days} value={o.days}>{o.label}</option>)}
-                      </select>
+                        <p className="text-xs font-bold" style={{ color: '#0F766E' }}>{form.description}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'rgba(15,118,110,0.7)' }}>
+                          {form.installmentsTotal} × {installmentXlm} XLM · {INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.[lang === 'tl' ? 'labelTl' : 'label'].toLowerCase()}
+                        </p>
+                      </div>
+                    )}
+
+                    {(formError || createError) && (
+                      <div
+                        className="rounded-xl px-4 py-3 text-xs font-semibold"
+                        style={{ backgroundColor: 'rgba(244,63,94,0.08)', color: '#be123c', border: '1px solid rgba(244,63,94,0.2)' }}
+                      >
+                        {formError ?? createError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CTA */}
+                  {mode === 'qr' ? (
+                    <button
+                      onClick={handleGenerateQR}
+                      className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-2xl transition-all active:scale-[0.98]"
+                      style={{
+                        background: 'linear-gradient(135deg, #0F766E, #0D9488)',
+                        minHeight: '56px',
+                        fontSize: '0.9rem',
+                        boxShadow: '0 4px 18px rgba(15,118,110,0.4)',
+                      }}
+                    >
+                      <QrCode size={17} />
+                      {lang === 'tl' ? 'I-generate ang QR Code' : 'Generate QR Code'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleManualCreate}
+                      disabled={isCreating}
+                      className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50"
+                      style={{
+                        background: 'linear-gradient(135deg, #0F766E, #0D9488)',
+                        minHeight: '56px',
+                        fontSize: '0.9rem',
+                        boxShadow: '0 4px 18px rgba(15,118,110,0.4)',
+                      }}
+                    >
+                      {isCreating && <Loader2 size={16} className="animate-spin" />}
+                      {isCreating
+                        ? (lang === 'tl' ? 'Inilalagay sa chain…' : 'Submitting on-chain…')
+                        : (lang === 'tl' ? 'Lumikha ng Kasunduan' : 'Create Agreement')
+                      }
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* ── Fee payment step ── */}
+              {step === 'fee_payment' && (
+                <div className="space-y-4">
+                  {/* Summary card — dark teal */}
+                  <div
+                    className="rounded-2xl p-5 space-y-3 relative overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #0A3D38, #0F766E)' }}
+                  >
+                    <div
+                      className="absolute inset-0 pointer-events-none opacity-[0.05]"
+                      style={{
+                        backgroundImage: `repeating-linear-gradient(
+                          45deg, white 0px, white 1px, transparent 1px, transparent 10px
+                        ), repeating-linear-gradient(
+                          -45deg, white 0px, white 1px, transparent 1px, transparent 10px
+                        )`,
+                      }}
+                    />
+                    <p
+                      className="text-xs font-bold uppercase tracking-widest relative"
+                      style={{ color: 'rgba(255,255,255,0.5)' }}
+                    >
+                      {lang === 'tl' ? 'Buod ng Kasunduan' : 'Agreement Summary'}
+                    </p>
+                    <p className="text-base font-bold text-white relative">{form.description}</p>
+                    <div className="space-y-2 relative">
+                      {[
+                        {
+                          label: lang === 'tl' ? 'Kabuuang halaga' : 'Total amount',
+                          value: `${form.totalAmountXlm} XLM`,
+                        },
+                        {
+                          label: lang === 'tl' ? 'Installments' : 'Installments',
+                          value: `${form.installmentsTotal} × ${(Number(form.totalAmountXlm) / form.installmentsTotal).toFixed(2)} XLM`,
+                        },
+                        {
+                          label: lang === 'tl' ? 'Agwat' : 'Interval',
+                          value: INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.[lang === 'tl' ? 'labelTl' : 'label'] ?? '',
+                        },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex items-center justify-between text-sm">
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+                          <span className="font-bold text-white">{value}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Preview */}
-                  {installmentXlm && form.description && (
-                    <div className="bg-teal-50 border border-teal-100 rounded-lg px-3 py-2.5 text-xs text-teal-800">
-                      <p className="font-semibold mb-0.5">{form.description}</p>
-                      <p>{form.installmentsTotal} × {installmentXlm} XLM · {INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.label.toLowerCase()}</p>
+                  {/* Fee card — amber */}
+                  <div
+                    className="rounded-2xl p-5 space-y-3"
+                    style={{ backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={18} style={{ color: '#D97706' }} className="shrink-0" />
+                      <p className="text-sm font-bold" style={{ color: '#92400E' }}>
+                        {lang === 'tl' ? 'Bayad sa Serbisyo ng PalengkePay' : 'PalengkePay Service Fee'}
+                      </p>
                     </div>
-                  )}
-
-                  {(formError || createError) && (
-                    <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError ?? createError}</p>
-                  )}
-                </div>
-
-                {/* CTA */}
-                {mode === 'qr' ? (
-                  <button onClick={handleGenerateQR}
-                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                  >
-                    <QrCode size={16} /> Generate QR Code
-                  </button>
-                ) : (
-                  <button onClick={handleManualCreate} disabled={isCreating}
-                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                  >
-                    {isCreating && <Loader2 size={15} className="animate-spin" />}
-                    {isCreating ? 'Submitting on-chain…' : 'Create Agreement'}
-                  </button>
-                )}
-              </>
-            )}
-
-            {/* ── Fee payment step ── */}
-            {step === 'fee_payment' && (
-              <div className="space-y-5">
-                {/* Summary of what they're creating */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-3">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Agreement Summary</p>
-                  <p className="text-sm font-semibold text-slate-800">{form.description}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">Total amount</span>
-                    <span className="font-bold text-slate-900">{form.totalAmountXlm} XLM</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">Installments</span>
-                    <span className="font-medium text-slate-700">
-                      {form.installmentsTotal} × {(Number(form.totalAmountXlm) / form.installmentsTotal).toFixed(2)} XLM
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">Interval</span>
-                    <span className="font-medium text-slate-700">
-                      {INTERVAL_OPTIONS.find((o) => o.days === form.intervalDays)?.label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Fee card */}
-                <div className="bg-teal-50 border border-teal-200 rounded-xl p-5 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck size={18} className="text-teal-700 shrink-0" />
-                    <p className="text-sm font-semibold text-teal-800">PalengkePay Service Fee</p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-teal-700">QR utang creation fee</span>
-                    <span className="text-xl font-bold text-teal-900">{FEE_XLM} XLM</span>
-                  </div>
-                  <p className="text-xs text-teal-600">
-                    One-time fee per QR agreement. Paid to PalengkePay to register this installment on-chain.
-                  </p>
-                </div>
-
-                {feeError && (
-                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{feeError}</p>
-                )}
-
-                {feeStatus !== 'paying' ? (
-                  <button
-                    onClick={handlePayFee}
-                    className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                  >
-                    <CheckCircle size={16} />
-                    Pay {FEE_XLM} XLM &amp; Generate QR
-                  </button>
-                ) : (
-                  <div className="w-full flex items-center justify-center gap-2 bg-teal-700/70 text-white py-3.5 rounded-xl text-sm font-semibold">
-                    <Loader2 size={16} className="animate-spin" />
-                    Confirm in wallet…
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── QR display step ── */}
-            {step === 'qr_display' && qrPayload && (
-              <div className="space-y-5">
-                {/* Hidden canvas used for PNG download */}
-                <QRCodeCanvas
-                  ref={qrCanvasRef}
-                  value={JSON.stringify(qrPayload)}
-                  size={440}
-                  level="M"
-                  bgColor="#ffffff"
-                  fgColor="#0f172a"
-                  style={{ display: 'none' }}
-                />
-
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col items-center gap-4">
-                  <div className="bg-white p-3 rounded-xl border-2 border-teal-200 shadow-sm">
-                    <QRCodeSVG value={JSON.stringify(qrPayload)} size={220} level="M" bgColor="#ffffff" fgColor="#0f172a" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-base font-bold text-slate-900">{qrPayload.d}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      {(qrPayload.a / STROOPS).toFixed(2)} XLM · {qrPayload.n} × {(qrPayload.a / STROOPS / qrPayload.n).toFixed(2)} XLM · {INTERVAL_OPTIONS.find((o) => o.days * 86400 === qrPayload.i)?.label ?? ''}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm" style={{ color: '#B45309' }}>
+                        {lang === 'tl' ? 'Bayad sa paglikha ng QR utang' : 'QR utang creation fee'}
+                      </span>
+                      <span
+                        className="font-black"
+                        style={{ fontSize: '1.6rem', color: '#92400E', fontFamily: "'Syne', sans-serif" }}
+                      >
+                        {FEE_XLM} XLM
+                      </span>
+                    </div>
+                    <p className="text-xs" style={{ color: 'rgba(146,64,14,0.7)' }}>
+                      {lang === 'tl'
+                        ? 'One-time fee bawat QR na kasunduan. Bayad sa PalengkePay para ma-register on-chain.'
+                        : 'One-time fee per QR agreement. Paid to PalengkePay to register this installment on-chain.'}
                     </p>
                   </div>
+
+                  {feeError && (
+                    <div
+                      className="rounded-xl px-4 py-3 text-xs font-semibold"
+                      style={{ backgroundColor: 'rgba(244,63,94,0.08)', color: '#be123c', border: '1px solid rgba(244,63,94,0.2)' }}
+                    >
+                      {feeError}
+                    </div>
+                  )}
+
+                  {feeStatus !== 'paying' ? (
+                    <button
+                      onClick={handlePayFee}
+                      className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-2xl transition-all active:scale-[0.98]"
+                      style={{
+                        background: 'linear-gradient(135deg, #0F766E, #0D9488)',
+                        minHeight: '56px',
+                        fontSize: '0.9rem',
+                        boxShadow: '0 4px 18px rgba(15,118,110,0.4)',
+                      }}
+                    >
+                      <CheckCircle size={17} />
+                      {lang === 'tl'
+                        ? `Bayaran ang ${FEE_XLM} XLM at I-generate ang QR`
+                        : `Pay ${FEE_XLM} XLM & Generate QR`}
+                    </button>
+                  ) : (
+                    <div
+                      className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-2xl"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(15,118,110,0.7), rgba(13,148,136,0.7))',
+                        minHeight: '56px',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      <Loader2 size={17} className="animate-spin" />
+                      {lang === 'tl' ? 'Kumpirmahin sa wallet…' : 'Confirm in wallet…'}
+                    </div>
+                  )}
                 </div>
+              )}
 
-                <button
-                  onClick={downloadQR}
-                  className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-                >
-                  <Download size={16} /> Download QR Image
-                </button>
+              {/* ── QR display step ── */}
+              {step === 'qr_display' && qrPayload && (
+                <div className="space-y-4">
+                  {/* Hidden canvas for download */}
+                  <QRCodeCanvas
+                    ref={qrCanvasRef}
+                    value={JSON.stringify(qrPayload)}
+                    size={440}
+                    level="M"
+                    bgColor="#ffffff"
+                    fgColor="#0f172a"
+                    style={{ display: 'none' }}
+                  />
 
-                <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-1.5">
-                  <p className="text-sm font-semibold text-teal-800">How it works</p>
-                  <ol className="text-xs text-teal-700 space-y-1 list-decimal list-inside">
-                    <li>Show this QR to your customer</li>
-                    <li>Customer opens PalengkePay → My Utang → tap Scan</li>
-                    <li>Customer reviews details and taps Accept</li>
-                    <li>Agreement registers on-chain automatically</li>
-                  </ol>
+                  {/* QR card */}
+                  <div
+                    className="rounded-3xl p-6 flex flex-col items-center gap-4"
+                    style={{
+                      backgroundColor: 'white',
+                      border: '1px solid rgba(15,23,42,0.08)',
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    <div
+                      className="p-3 rounded-2xl"
+                      style={{ border: '2px solid rgba(15,118,110,0.2)', backgroundColor: 'white' }}
+                    >
+                      <QRCodeSVG
+                        value={JSON.stringify(qrPayload)}
+                        size={220}
+                        level="M"
+                        bgColor="#ffffff"
+                        fgColor="#0f172a"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-base font-bold text-slate-900">{qrPayload.d}</p>
+                      <p className="text-sm mt-1" style={{ color: 'rgba(15,23,42,0.45)' }}>
+                        {(qrPayload.a / STROOPS).toFixed(2)} XLM · {qrPayload.n} × {(qrPayload.a / STROOPS / qrPayload.n).toFixed(2)} XLM · {INTERVAL_OPTIONS.find((o) => o.days * 86400 === qrPayload.i)?.[lang === 'tl' ? 'labelTl' : 'label'] ?? ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Download */}
+                  <button
+                    onClick={downloadQR}
+                    className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-2xl transition-all active:scale-[0.98]"
+                    style={{
+                      background: 'linear-gradient(135deg, #0F766E, #0D9488)',
+                      minHeight: '56px',
+                      fontSize: '0.9rem',
+                      boxShadow: '0 4px 18px rgba(15,118,110,0.4)',
+                    }}
+                  >
+                    <Download size={17} />
+                    {lang === 'tl' ? 'I-download ang QR Image' : 'Download QR Image'}
+                  </button>
+
+                  {/* How it works */}
+                  <div
+                    className="rounded-2xl p-4 space-y-2"
+                    style={{ backgroundColor: 'rgba(15,118,110,0.07)', border: '1px solid rgba(15,118,110,0.12)' }}
+                  >
+                    <p className="text-sm font-bold" style={{ color: '#0F766E' }}>
+                      {lang === 'tl' ? 'Paano ito gumagana' : 'How it works'}
+                    </p>
+                    <ol className="text-xs space-y-1 list-decimal list-inside" style={{ color: 'rgba(15,118,110,0.8)' }}>
+                      {lang === 'tl' ? (
+                        <>
+                          <li>Ipakita itong QR sa iyong customer</li>
+                          <li>Buksan ng customer ang PalengkePay → My Utang → i-tap ang Scan</li>
+                          <li>Tingnan ng customer ang detalye at i-tap ang Tanggapin</li>
+                          <li>Awtomatikong nai-register ang kasunduan on-chain</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>Show this QR to your customer</li>
+                          <li>Customer opens PalengkePay → My Utang → tap Scan</li>
+                          <li>Customer reviews details and taps Accept</li>
+                          <li>Agreement registers on-chain automatically</li>
+                        </>
+                      )}
+                    </ol>
+                  </div>
+
+                  <button
+                    onClick={handleClose}
+                    className="w-full font-bold rounded-2xl transition-all active:scale-[0.98]"
+                    style={{
+                      minHeight: '52px',
+                      fontSize: '0.9rem',
+                      border: '1.5px solid rgba(15,23,42,0.12)',
+                      color: 'rgba(15,23,42,0.55)',
+                      backgroundColor: 'white',
+                    }}
+                  >
+                    {lang === 'tl' ? 'Isara' : 'Done'}
+                  </button>
                 </div>
+              )}
 
-                <button onClick={handleClose}
-                  className="w-full border border-slate-200 hover:bg-slate-100 text-slate-700 py-3 rounded-xl text-sm font-semibold transition-colors"
-                >
-                  Done
-                </button>
-              </div>
-            )}
-
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -117,8 +117,8 @@ export function QRScanner({ onScan, onManualEntry, onRawScan }: Props) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="relative rounded-xl overflow-hidden bg-black">
+    <div className="space-y-4 px-4 pb-4">
+      <div className="relative rounded-2xl overflow-hidden bg-black">
         <div id={containerId} className="w-full" style={{ minHeight: 300 }} />
 
         {/* Corner bracket viewfinder overlay */}
@@ -157,20 +157,27 @@ export function QRScanner({ onScan, onManualEntry, onRawScan }: Props) {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+        <div
+          className="rounded-xl px-4 py-3 text-sm font-semibold text-center"
+          style={{ backgroundColor: 'rgba(244,63,94,0.15)', color: '#FDA4AF', border: '1px solid rgba(244,63,94,0.3)' }}
+        >
           {error}
         </div>
       )}
 
-      <p className="text-xs text-slate-400 text-center">
-        Align the QR code within the brackets
+      <p className="text-xs text-center font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        I-align ang QR code sa loob ng brackets
       </p>
 
-      <div className={`grid gap-2 ${onManualEntry ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      <div className={`grid gap-3 ${onManualEntry ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {onManualEntry && (
           <button
             onClick={onManualEntry}
-            className="flex items-center justify-center gap-2 text-sm text-teal-700 hover:text-teal-600 border border-teal-200 hover:bg-teal-50 py-2.5 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-2xl active:scale-95 transition-all"
+            style={{
+              color: '#0A3D38',
+              backgroundColor: 'rgba(255,255,255,0.92)',
+            }}
           >
             <Keyboard size={15} />
             Manual entry
@@ -179,7 +186,11 @@ export function QRScanner({ onScan, onManualEntry, onRawScan }: Props) {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center justify-center gap-2 text-sm text-teal-700 hover:text-teal-600 border border-teal-200 hover:bg-teal-50 py-2.5 rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-2xl active:scale-95 transition-all disabled:opacity-40"
+          style={{
+            color: '#0A3D38',
+            backgroundColor: 'rgba(255,255,255,0.92)',
+          }}
         >
           <ImageUp size={15} />
           {uploading ? 'Reading…' : 'Upload QR image'}

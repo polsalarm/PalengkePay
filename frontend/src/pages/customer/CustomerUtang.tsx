@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { HandCoins, CheckCircle, Loader2, X, ExternalLink, AlertTriangle, ScanLine, ImageUp } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { HandCoins, CheckCircle, Loader2, X, ExternalLink, AlertTriangle, ScanLine, ImageUp, ChevronRight } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useWallet } from '../../lib/hooks/useWallet';
 import { useCustomerUtangs, usePayInstallment, useCreateUtang } from '../../lib/hooks/useUtang';
@@ -114,51 +115,116 @@ export function CustomerUtang() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 animate-page-in" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between pt-1">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">My Utang</h1>
-          <p className="text-sm text-slate-400">Your installment plans</p>
+          <h1
+            className="text-xl font-black text-slate-900 leading-tight"
+            style={{ fontFamily: "'Syne', sans-serif" }}
+          >
+            My Utang
+          </h1>
+          <p className="text-sm text-slate-400 mt-0.5">Iyong mga installment plans</p>
         </div>
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadLoading}
-          className="flex items-center gap-1.5 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 text-sm font-bold px-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50"
+          style={{
+            minHeight: '44px',
+            color: '#0F766E',
+            backgroundColor: '#F0FDFA',
+            border: '1.5px solid #CCFBF1',
+          }}
         >
-          <ImageUp size={14} />
+          <ImageUp size={15} />
           {uploadLoading ? 'Reading…' : 'Upload QR'}
         </button>
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUploadQR} />
 
+      {/* ── Upload error ── */}
       {uploadError && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700">
+        <div
+          className="rounded-2xl px-4 py-3 text-sm font-semibold"
+          style={{ backgroundColor: '#FFF1F2', color: '#F43F5E', border: '1.5px solid #FECDD3' }}
+        >
           {uploadError}
         </div>
       )}
 
-      {/* Due summary */}
+      {/* ── Due summary hero ── */}
       {active.length > 0 && (
-        <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest opacity-75 mb-1">Total Due (Next Installments)</p>
-          <p className="text-3xl font-bold">
-            {totalDue.toFixed(2)}
-            <span className="text-base font-medium opacity-70 ml-2">XLM</span>
-          </p>
-          <p className="text-xs opacity-60 mt-1">{active.length} active plan{active.length !== 1 ? 's' : ''}</p>
+        <div
+          className="relative rounded-3xl p-5 overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 50%, #FBBF24 100%)' }}
+        >
+          {/* Texture */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.06]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg, white 0px, white 1px, transparent 1px, transparent 10px
+              )`,
+            }}
+          />
+          {/* ₱ watermark */}
+          <div
+            className="absolute select-none pointer-events-none font-black"
+            style={{
+              fontSize: '9rem', lineHeight: 1,
+              color: 'rgba(255,255,255,0.08)',
+              bottom: -15, right: -5,
+              fontFamily: "'Syne', sans-serif",
+            }}
+          >₱</div>
+
+          <div className="relative">
+            <p
+              className="text-xs font-bold uppercase tracking-[0.18em] mb-2"
+              style={{ color: 'rgba(255,255,255,0.65)' }}
+            >
+              Total Due — Next Installments
+            </p>
+            <div className="flex items-baseline gap-2 mb-3">
+              <span
+                className="font-black text-white leading-none"
+                style={{
+                  fontSize: totalDue.toFixed(2).length >= 8 ? '2.4rem' : '3rem',
+                  fontFamily: "'Syne', sans-serif",
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {totalDue.toFixed(2)}
+              </span>
+              <span className="text-lg font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>XLM</span>
+            </div>
+            <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              {active.length} aktibong plan{active.length !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Filter tabs */}
+      {/* ── Filter tabs ── */}
       {utangs.length > 0 && (
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+        <div
+          className="flex gap-1 p-1 rounded-2xl"
+          style={{ backgroundColor: '#F1F5F9' }}
+        >
           {(['active', 'completed', 'all'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`flex-1 text-xs font-semibold py-2 rounded-lg capitalize transition-all ${
-                filter === f ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
+              className="flex-1 text-xs font-bold rounded-xl capitalize transition-all active:scale-95"
+              style={{
+                minHeight: '40px',
+                backgroundColor: filter === f ? 'white' : 'transparent',
+                color: filter === f ? '#0F172A' : '#94A3B8',
+                boxShadow: filter === f ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              }}
             >
               {f}
             </button>
@@ -166,53 +232,63 @@ export function CustomerUtang() {
         </div>
       )}
 
-      {/* Loading */}
+      {/* ── Loading ── */}
       {isLoading && (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
-              <div className="h-4 w-32 skeleton rounded" />
-              <div className="h-3 w-48 skeleton rounded" />
-              <div className="h-2 w-full skeleton rounded-full" />
+            <div key={i} className="bg-white rounded-2xl p-5 space-y-3" style={{ border: '1.5px solid #F1F5F9' }}>
+              <div className="h-4 w-32 skeleton rounded-lg" />
+              <div className="h-3 w-48 skeleton rounded-lg" />
+              <div className="h-2.5 w-full skeleton rounded-full" />
               <div className="flex justify-between">
-                <div className="h-3 w-20 skeleton rounded" />
-                <div className="h-3 w-16 skeleton rounded" />
+                <div className="h-3 w-20 skeleton rounded-lg" />
+                <div className="h-3 w-16 skeleton rounded-lg" />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Empty state */}
+      {/* ── Empty state ── */}
       {!isLoading && filtered.length === 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-4">
-            <HandCoins size={28} className="text-teal-400" />
+        <div
+          className="rounded-3xl p-8 text-center"
+          style={{ backgroundColor: 'white', border: '1.5px solid #F1F5F9' }}
+        >
+          <div
+            className="w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: '#FEF3C7', border: '2px solid #FDE68A' }}
+          >
+            <HandCoins size={28} style={{ color: '#D97706' }} />
           </div>
-          <p className="text-sm font-semibold text-slate-700 mb-1">
-            {filter === 'active' ? 'No active plans' : `No ${filter} plans`}
+          <p
+            className="text-base font-black text-slate-800 mb-1"
+            style={{ fontFamily: "'Syne', sans-serif" }}
+          >
+            {filter === 'active' ? 'Walang aktibong plan' : `Walang ${filter} na plans`}
           </p>
-          <p className="text-xs text-slate-400 mb-5">
-            Ask your vendor for an installment QR, then scan or upload it below to accept.
+          <p className="text-sm text-slate-500 mb-5">
+            Humingi ng installment QR sa iyong vendor, tapos i-scan o i-upload.
           </p>
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-teal-600 font-medium">
-              <ScanLine size={14} />
-              Scan QR ↓
+          <div className="flex items-center justify-center gap-4">
+            <div
+              className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl"
+              style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
+            >
+              <ScanLine size={14} /> Scan QR
             </div>
-            <span className="text-slate-300">or</span>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-xs text-teal-600 font-medium hover:text-teal-700"
+              className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl active:scale-95"
+              style={{ color: '#D97706', backgroundColor: '#FEF3C7' }}
             >
-              <ImageUp size={14} />
-              Upload QR image
+              <ImageUp size={14} /> Upload QR
             </button>
           </div>
         </div>
       )}
 
-      {/* Utang cards */}
+      {/* ── Utang cards ── */}
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-3">
           {filtered.map((u) => (
@@ -227,178 +303,285 @@ export function CustomerUtang() {
         </div>
       )}
 
-      {/* Uploaded utang offer modal */}
-      {uploadedOffer && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-5 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-xs text-teal-600 font-semibold uppercase tracking-wide">Installment Credit Offer</p>
+      {/* ── Uploaded offer bottom sheet ── */}
+      {uploadedOffer && createPortal(
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+          <div
+            className="w-full rounded-t-3xl overflow-hidden"
+            style={{ backgroundColor: 'white', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: '#E2E8F0' }} />
+            </div>
+
+            <div className="px-5 pt-2 pb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#D97706' }}>
+                  Installment Credit Offer
+                </p>
+                <p className="text-base font-black text-slate-900 mt-0.5" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  Suriin bago tanggapin
+                </p>
+              </div>
               {offerAcceptStatus !== 'signing' && !isCreating && (
-                <button onClick={() => setUploadedOffer(null)} className="text-slate-400 hover:text-slate-600">
-                  <X size={18} />
+                <button
+                  onClick={() => setUploadedOffer(null)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95"
+                  style={{ backgroundColor: '#F1F5F9' }}
+                >
+                  <X size={16} style={{ color: '#64748B' }} />
                 </button>
               )}
             </div>
-            <div className="p-5 space-y-4">
-              <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+
+            <div className="px-5 pb-6 space-y-4">
+              {/* Details card */}
+              <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F1F5F9' }}>
                 {uploadedOffer.d && (
-                  <div>
-                    <p className="text-xs text-slate-500 mb-0.5">Items</p>
-                    <p className="text-sm font-semibold text-slate-800">{uploadedOffer.d}</p>
+                  <div className="px-4 py-3" style={{ borderBottom: '1px solid #F8FAFC' }}>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Mga Item</p>
+                    <p className="text-sm font-bold text-slate-800">{uploadedOffer.d}</p>
                   </div>
                 )}
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-white rounded-lg p-2 border border-slate-200">
-                    <p className="text-base font-bold text-slate-900">{(uploadedOffer.a / STROOPS).toFixed(2)}</p>
-                    <p className="text-xs text-slate-400">XLM total</p>
+                <div className="grid grid-cols-3 divide-x divide-slate-100">
+                  <div className="p-4 text-center">
+                    <p className="text-xl font-black text-slate-900 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                      {(uploadedOffer.a / STROOPS).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">XLM total</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2 border border-slate-200">
-                    <p className="text-base font-bold text-slate-900">{uploadedOffer.n}×</p>
-                    <p className="text-xs text-slate-400">{(uploadedOffer.a / STROOPS / uploadedOffer.n).toFixed(2)} XLM</p>
+                  <div className="p-4 text-center">
+                    <p className="text-xl font-black text-slate-900 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                      {uploadedOffer.n}×
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">{(uploadedOffer.a / STROOPS / uploadedOffer.n).toFixed(2)} XLM</p>
                   </div>
-                  <div className="bg-white rounded-lg p-2 border border-slate-200">
-                    <p className="text-sm font-bold text-slate-900 capitalize">{intervalLabel(uploadedOffer.i)}</p>
-                    <p className="text-xs text-slate-400">interval</p>
+                  <div className="p-4 text-center">
+                    <p className="text-base font-black text-slate-900 leading-tight capitalize" style={{ fontFamily: "'Syne', sans-serif" }}>
+                      {intervalLabel(uploadedOffer.i)}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">interval</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 font-mono truncate">
-                  Vendor: {uploadedOffer.v.slice(0, 12)}…{uploadedOffer.v.slice(-6)}
-                </p>
+                <div className="px-4 py-2.5" style={{ backgroundColor: '#FAFAFA', borderTop: '1px solid #F8FAFC' }}>
+                  <p className="text-xs text-slate-400 font-mono truncate">
+                    Vendor: {uploadedOffer.v.slice(0, 12)}…{uploadedOffer.v.slice(-6)}
+                  </p>
+                </div>
               </div>
 
               {offerAcceptStatus === 'idle' && (
                 <button
                   onClick={handleAcceptOffer}
-                  className="w-full bg-teal-700 hover:bg-teal-800 text-white py-3 rounded-xl text-sm font-semibold transition-colors"
+                  className="w-full text-white font-black rounded-2xl active:scale-95 transition-all"
+                  style={{
+                    backgroundColor: '#0F766E',
+                    minHeight: '56px',
+                    fontSize: '1rem',
+                    fontFamily: "'Syne', sans-serif",
+                    boxShadow: '0 6px 20px rgba(15,118,110,0.35)',
+                  }}
                 >
-                  Accept &amp; Sign
+                  Tanggapin at I-sign
                 </button>
               )}
               {(offerAcceptStatus === 'signing' || isCreating) && (
-                <div className="text-center py-3 space-y-2">
-                  <Loader2 className="animate-spin mx-auto text-teal-600" size={24} />
-                  <p className="text-sm text-slate-500">Confirm in your wallet…</p>
-                  <p className="text-xs text-slate-400">On mobile: open LOBSTR app and approve.</p>
+                <div className="text-center py-5 space-y-2 rounded-2xl" style={{ backgroundColor: '#F8FAFC' }}>
+                  <Loader2 className="animate-spin mx-auto" size={26} style={{ color: '#0F766E' }} />
+                  <p className="text-sm font-bold text-slate-600">Kumpirmahin sa iyong wallet…</p>
+                  <p className="text-xs text-slate-400">Sa mobile: buksan ang LOBSTR at i-approve.</p>
                 </div>
               )}
               {offerAcceptStatus === 'confirmed' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 justify-center text-green-600">
-                    <CheckCircle size={20} />
-                    <span className="text-sm font-semibold">Agreement accepted!</span>
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-2xl"
+                    style={{ backgroundColor: '#F0FDF4', border: '1.5px solid #BBF7D0' }}
+                  >
+                    <CheckCircle size={20} style={{ color: '#16A34A' }} />
+                    <p className="text-sm font-bold text-green-800">Kasunduan tinanggap!</p>
                   </div>
                   {offerTxHash && (
-                    <a href={stellarExpertUrl(offerTxHash)} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 text-xs text-teal-600 hover:underline">
-                      View on Stellar Expert <ExternalLink size={11} />
+                    <a
+                      href={stellarExpertUrl(offerTxHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-xl w-full"
+                      style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
+                    >
+                      <ExternalLink size={12} /> Tingnan sa Stellar Expert
                     </a>
                   )}
-                  <button onClick={() => setUploadedOffer(null)}
-                    className="w-full border border-slate-200 hover:bg-slate-50 text-slate-700 py-2.5 rounded-xl text-sm font-medium transition-all">
-                    Close
+                  <button
+                    onClick={() => setUploadedOffer(null)}
+                    className="w-full font-bold rounded-2xl active:scale-95 text-sm"
+                    style={{ minHeight: '52px', border: '2px solid #E2E8F0', color: '#475569' }}
+                  >
+                    Isara
                   </button>
                 </div>
               )}
               {offerAcceptStatus === 'failed' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 justify-center text-rose-600">
-                    <AlertTriangle size={16} />
-                    <span className="text-sm font-semibold">Failed</span>
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-2xl"
+                    style={{ backgroundColor: '#FFF1F2', border: '1.5px solid #FECDD3' }}
+                  >
+                    <AlertTriangle size={18} style={{ color: '#F43F5E' }} />
+                    <p className="text-sm font-semibold text-rose-700 flex-1">{offerError}</p>
                   </div>
-                  <p className="text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2 text-center">{offerError}</p>
-                  <button onClick={handleAcceptOffer}
-                    className="w-full bg-teal-700 hover:bg-teal-600 text-white py-2.5 rounded-xl text-sm font-semibold">
-                    Retry
+                  <button
+                    onClick={handleAcceptOffer}
+                    className="w-full text-white font-bold rounded-2xl active:scale-95"
+                    style={{ backgroundColor: '#0F766E', minHeight: '52px' }}
+                  >
+                    Subukan Ulit
                   </button>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Pay installment modal */}
-      {paying && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl overflow-hidden">
-            <div className="px-5 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-900">Pay Installment</h2>
+      {/* ── Pay installment bottom sheet ── */}
+      {paying && createPortal(
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+          <div
+            className="w-full rounded-t-3xl overflow-hidden"
+            style={{ backgroundColor: 'white', maxWidth: '480px' }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: '#E2E8F0' }} />
+            </div>
+
+            <div className="px-5 pt-2 pb-2 flex items-center justify-between">
+              <p className="text-base font-black text-slate-900" style={{ fontFamily: "'Syne', sans-serif" }}>
+                Bayad ng Installment
+              </p>
               {status !== 'building' && status !== 'signing' && status !== 'submitting' && (
-                <button onClick={handleClosePayModal} className="text-slate-400 hover:text-slate-600">
-                  <X size={18} />
+                <button
+                  onClick={handleClosePayModal}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-95"
+                  style={{ backgroundColor: '#F1F5F9' }}
+                >
+                  <X size={16} style={{ color: '#64748B' }} />
                 </button>
               )}
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="px-5 pb-8 space-y-4">
+              {/* Description */}
               {paying.description && (
-                <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 font-medium">{paying.description}</p>
+                <p
+                  className="text-sm font-semibold px-4 py-3 rounded-2xl"
+                  style={{ backgroundColor: '#F8FAFC', color: '#475569' }}
+                >
+                  {paying.description}
+                </p>
               )}
-              <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Installment</span>
-                  <span className="font-semibold text-slate-800">{paying.installmentsPaid + 1} of {paying.installmentsTotal}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Amount</span>
-                  <span className="font-bold text-teal-700">
-                    {(() => {
-                      const remaining = paying.installmentsTotal - paying.installmentsPaid;
-                      const rest = paying.totalAmountXlm - paying.installmentAmountXlm * paying.installmentsPaid;
-                      return (remaining === 1 ? rest : paying.installmentAmountXlm).toFixed(2);
-                    })()} XLM
-                  </span>
-                </div>
+
+              {/* Amount hero */}
+              <div
+                className="rounded-2xl p-5 text-center"
+                style={{ backgroundColor: '#0A3D38' }}
+              >
+                <p
+                  className="text-xs font-bold uppercase tracking-widest mb-2"
+                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                >
+                  Installment {paying.installmentsPaid + 1} of {paying.installmentsTotal}
+                </p>
+                <p
+                  className="font-black text-white leading-none"
+                  style={{ fontSize: '2.6rem', fontFamily: "'Syne', sans-serif", letterSpacing: '-0.02em' }}
+                >
+                  {(() => {
+                    const remaining = paying.installmentsTotal - paying.installmentsPaid;
+                    const rest = paying.totalAmountXlm - paying.installmentAmountXlm * paying.installmentsPaid;
+                    return (remaining === 1 ? rest : paying.installmentAmountXlm).toFixed(2);
+                  })()}
+                </p>
+                <p className="text-base font-bold mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>XLM</p>
               </div>
 
               {status === 'idle' && (
-                <button onClick={confirmPay}
-                  className="w-full bg-teal-700 hover:bg-teal-800 active:scale-95 text-white py-3 rounded-xl text-sm font-semibold transition-all">
-                  Confirm Payment
+                <button
+                  onClick={confirmPay}
+                  className="w-full text-white font-black rounded-2xl active:scale-95 transition-all"
+                  style={{
+                    backgroundColor: '#0F766E',
+                    minHeight: '56px',
+                    fontSize: '1rem',
+                    fontFamily: "'Syne', sans-serif",
+                    boxShadow: '0 6px 20px rgba(15,118,110,0.35)',
+                  }}
+                >
+                  Kumpirmahin ang Bayad
                 </button>
               )}
               {(status === 'building' || status === 'signing' || status === 'submitting') && (
-                <div className="text-center py-2 space-y-2">
-                  <Loader2 className="animate-spin mx-auto text-teal-600" size={24} />
-                  <p className="text-sm text-slate-500">
-                    {status === 'building' ? 'Preparing…' : status === 'signing' ? 'Confirm in wallet…' : 'Processing…'}
+                <div className="text-center py-5 space-y-2 rounded-2xl" style={{ backgroundColor: '#F8FAFC' }}>
+                  <Loader2 className="animate-spin mx-auto" size={26} style={{ color: '#0F766E' }} />
+                  <p className="text-sm font-bold text-slate-600">
+                    {status === 'building' ? 'Inihahanda…' : status === 'signing' ? 'Kumpirmahin sa wallet…' : 'Pinoproseso…'}
                   </p>
                 </div>
               )}
               {status === 'confirmed' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 justify-center text-green-600">
-                    <CheckCircle size={20} />
-                    <span className="text-sm font-semibold">Payment confirmed!</span>
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-2xl"
+                    style={{ backgroundColor: '#F0FDF4', border: '1.5px solid #BBF7D0' }}
+                  >
+                    <CheckCircle size={20} style={{ color: '#16A34A' }} />
+                    <p className="text-sm font-bold text-green-800">Bayad na!</p>
                   </div>
                   {txHash && (
-                    <a href={stellarExpertUrl(txHash)} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 text-xs text-teal-600 hover:underline">
-                      View on Stellar Expert <ExternalLink size={11} />
+                    <a
+                      href={stellarExpertUrl(txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 text-xs font-bold py-3 rounded-xl w-full"
+                      style={{ color: '#0F766E', backgroundColor: '#F0FDFA' }}
+                    >
+                      <ExternalLink size={12} /> Tingnan sa Stellar Expert
                     </a>
                   )}
-                  <button onClick={handleClosePayModal}
-                    className="w-full border border-slate-200 hover:bg-slate-50 active:scale-95 text-slate-700 py-2.5 rounded-xl text-sm font-medium transition-all">
-                    Close
+                  <button
+                    onClick={handleClosePayModal}
+                    className="w-full font-bold rounded-2xl active:scale-95 text-sm"
+                    style={{ minHeight: '52px', border: '2px solid #E2E8F0', color: '#475569' }}
+                  >
+                    Isara
                   </button>
                 </div>
               )}
               {status === 'failed' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 justify-center text-rose-600">
-                    <AlertTriangle size={16} />
-                    <span className="text-sm font-semibold">Failed</span>
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-2xl"
+                    style={{ backgroundColor: '#FFF1F2', border: '1.5px solid #FECDD3' }}
+                  >
+                    <AlertTriangle size={18} style={{ color: '#F43F5E' }} />
+                    <p className="text-sm font-semibold text-rose-700 flex-1">{error}</p>
                   </div>
-                  <p className="text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2 text-center">{error}</p>
-                  <button onClick={confirmPay}
-                    className="w-full bg-teal-700 hover:bg-teal-600 active:scale-95 text-white py-2.5 rounded-xl text-sm font-semibold transition-all">
-                    Retry
+                  <button
+                    onClick={confirmPay}
+                    className="w-full text-white font-bold rounded-2xl active:scale-95"
+                    style={{ backgroundColor: '#0F766E', minHeight: '52px' }}
+                  >
+                    Subukan Ulit
                   </button>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

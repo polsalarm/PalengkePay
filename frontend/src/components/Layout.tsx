@@ -78,7 +78,7 @@ export function Layout() {
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const scrollRef = useRef<HTMLElement>(null);
-  const isFullscreen = pathname === '/vendor/qr' || pathname === '/onboard';
+  const isFullscreen = pathname === '/vendor/qr' || pathname === '/onboard' || pathname === '/customer/scan';
   const pageTitle = PAGE_TITLES[pathname] ?? '';
 
   if (isFullscreen) {

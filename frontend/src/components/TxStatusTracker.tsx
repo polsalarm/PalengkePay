@@ -1,4 +1,4 @@
-import { Loader2, Lock, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, XCircle, ExternalLink, Zap } from 'lucide-react';
 import type { TxStatus } from '../lib/hooks/usePayment';
 import { stellarExpertUrl } from '../lib/stellar';
 
@@ -19,83 +19,155 @@ export function TxStatusTracker({ status, txHash, error, amount, recipientName, 
 
   const displayFee = fee ?? BASE_FEE;
 
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
-      {status === 'building' && (
-        <div className="flex items-center gap-3 text-slate-500">
-          <Loader2 size={20} className="animate-spin text-teal-700 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-slate-700">Preparing transaction…</p>
-            <p className="text-xs text-slate-400 mt-0.5">Network fee: {displayFee} XLM</p>
+  if (status === 'building') {
+    return (
+      <div
+        className="rounded-3xl p-5 flex items-center gap-4"
+        style={{ backgroundColor: '#0A3D38', border: '1.5px solid rgba(255,255,255,0.06)' }}
+      >
+        <div
+          className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+        >
+          <Loader2 size={20} className="animate-spin" style={{ color: '#14B8A6' }} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-white">Preparing transaction…</p>
+          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Network fee: {displayFee} XLM · sponsored
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'signing') {
+    return (
+      <div
+        className="rounded-3xl p-5 flex items-center gap-4 animate-border-pulse"
+        style={{ backgroundColor: '#0A3D38', border: '1.5px solid #14B8A6' }}
+      >
+        <div
+          className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: 'rgba(20,184,166,0.15)' }}
+        >
+          <Lock size={20} style={{ color: '#14B8A6' }} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-white">Kumpirmahin sa wallet</p>
+          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Mobile: buksan ang LOBSTR at i-approve. Desktop: check browser extension.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'submitting') {
+    return (
+      <div
+        className="rounded-3xl p-5 flex items-center gap-4"
+        style={{ backgroundColor: '#FFFBEB', border: '1.5px solid #FDE68A' }}
+      >
+        <div
+          className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ backgroundColor: 'rgba(245,158,11,0.15)' }}
+        >
+          <Zap size={20} style={{ color: '#D97706' }} className="animate-pulse" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold" style={{ color: '#92400E' }}>Processing on Stellar…</p>
+          <p className="text-xs mt-0.5" style={{ color: '#D97706' }}>
+            Karaniwang 3–5 segundo lang
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'confirmed') {
+    return (
+      <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #BBF7D0' }}>
+        <div
+          className="p-5 flex items-center gap-4"
+          style={{ backgroundColor: '#F0FDF4' }}
+        >
+          <div
+            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: '#DCFCE7' }}
+          >
+            <CheckCircle size={20} style={{ color: '#16A34A' }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black" style={{ color: '#15803D', fontFamily: "'Syne', sans-serif" }}>
+              Bayad na!
+            </p>
+            {amount && recipientName && (
+              <p className="text-xs mt-0.5" style={{ color: '#16A34A' }}>
+                {amount} XLM → {recipientName}
+              </p>
+            )}
           </div>
         </div>
-      )}
-
-      {status === 'signing' && (
-        <div className="flex items-center gap-3">
-          <Lock size={20} className="text-teal-700 shrink-0 animate-pulse" />
-          <div>
-            <p className="text-sm font-medium text-slate-800">Confirm in your wallet</p>
-            <p className="text-xs text-slate-400 mt-0.5">On mobile: open LOBSTR app and approve. On desktop: check your browser extension.</p>
-          </div>
-        </div>
-      )}
-
-      {status === 'submitting' && (
-        <div className="flex items-center gap-3">
-          <span className="w-5 h-5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-          <span className="text-sm font-medium text-amber-600">Processing on Stellar network…</span>
-        </div>
-      )}
-
-      {status === 'confirmed' && (
-        <div>
-          <div className="flex items-center gap-3 mb-3">
-            <CheckCircle size={22} className="text-green-600 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-green-700">Payment sent!</p>
-              {amount && recipientName && (
-                <p className="text-xs text-slate-500">{amount} XLM → {recipientName}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>Network fee</span>
-            <span className="font-mono">{displayFee} XLM</span>
-          </div>
+        <div
+          className="px-5 py-3 flex items-center justify-between"
+          style={{ backgroundColor: 'white', borderTop: '1px solid #BBF7D0' }}
+        >
+          <span className="text-xs text-slate-400">
+            Fee: <span className="font-mono">{displayFee} XLM</span>
+          </span>
           {txHash && (
             <a
               href={stellarExpertUrl(txHash)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs text-teal-700 hover:text-teal-600 font-medium"
+              className="flex items-center gap-1 text-xs font-bold active:scale-95"
+              style={{ color: '#0F766E' }}
             >
-              <ExternalLink size={12} />
-              View on Stellar Expert
+              <ExternalLink size={11} /> Stellar Expert
             </a>
           )}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {status === 'failed' && (
-        <div>
-          <div className="flex items-center gap-3 mb-3">
-            <XCircle size={22} className="text-red-600 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-red-700">Transaction failed</p>
-              {error && <p className="text-xs text-slate-500">{error}</p>}
-            </div>
+  if (status === 'failed') {
+    return (
+      <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #FECDD3' }}>
+        <div
+          className="p-5 flex items-center gap-4"
+          style={{ backgroundColor: '#FFF1F2' }}
+        >
+          <div
+            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: '#FFE4E6' }}
+          >
+            <XCircle size={20} style={{ color: '#F43F5E' }} />
           </div>
-          {onRetry && (
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black" style={{ color: '#BE123C', fontFamily: "'Syne', sans-serif" }}>
+              Transaction failed
+            </p>
+            {error && (
+              <p className="text-xs mt-0.5 font-mono" style={{ color: '#F43F5E' }}>{error}</p>
+            )}
+          </div>
+        </div>
+        {onRetry && (
+          <div className="px-5 py-3 bg-white" style={{ borderTop: '1px solid #FECDD3' }}>
             <button
               onClick={onRetry}
-              className="text-sm font-medium text-teal-700 hover:text-teal-600 active:scale-95 border border-teal-200 rounded-lg px-4 py-1.5 transition-all"
+              className="text-sm font-bold px-5 py-2 rounded-xl active:scale-95 transition-all text-white"
+              style={{ backgroundColor: '#F43F5E' }}
             >
               Try Again
             </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
 }
