@@ -1,4 +1,4 @@
-# PalengkePay
+# PalengkePay1
 
 > Stellar-powered micropayment PWA for Philippine wet market vendors. No bank account required.
 
